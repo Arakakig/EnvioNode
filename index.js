@@ -16,8 +16,12 @@ const port = 4001
 
 app.use(express.static(__dirname + '/frontend/static'));
 app.use(express.json())
-app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, "frontend", "index.html")))
+app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, "frontend", "static")))
 
+
+app.get("/*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
+});
 
 app.post('/sendemail', async (req, res) => {
     const data = req.body;
