@@ -6,8 +6,11 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server",
-    "build": "CI= npm build"
+    "build": "npm build"
   },
+  "keywords": [],
+  "author": "Guilherme Arakaki",
+  "license": "MIT",
   "dependencies": {
     "build": "^0.1.4",
     "cors": "^2.8.5",
@@ -16,7 +19,5 @@
     "nodemailer": "^6.6.3",
     "qrcode-terminal": "^0.12.0",
     "whatsapp-web.js": "^1.14.0"
-  },
-  "author": "Guilherme Arakaki",
-  "license": "ISC"
+  }
 }
