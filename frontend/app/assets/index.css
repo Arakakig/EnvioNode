@@ -1,0 +1,74 @@
+.nav-bar-section{
+    background-color: var(--main-color);
+    text-align: end;
+    padding: 15px;
+}
+.title-modal{
+    font-size: 24px;
+    font-weight: 800;
+}
+.subtitle-modal{
+    font-size: 16px;
+    font-weight: 600;
+}
+.button-7{
+    font-size: 16px;
+    font-weight: 600;
+}
+.buttonFinal{
+    text-align: center;
+}
+.buttonContact{
+    display: grid;
+    margin: 8px;
+    grid-template-columns: 40% 40% 20%;
+    border-left: 5px solid var(--main-color) ;
+    border-radius: 15px;
+}
+.typeBody{
+    display: grid;
+    padding: 15px;
+    margin-left: 10px;
+    margin-right: 10px;
+    border-radius: 5px;
+    background-color: var(--main-color);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    grid-template-columns: 40% 40% 20%;
+}
+
+.button-add{
+    color: #fff;
+}
+.dateNumber{
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+.dateNumber .input-field{
+    width: 120px;
+}
+
+@media screen and (max-width: 720px){
+    .buttonContact{
+        grid-template-columns: 100%;
+        text-align: center;
+    }
+
+    .nav-bar-section{
+        display: block;
+        text-align: start;
+    }
+    .typeBody{
+        padding: 10px;
+        align-items: center;
+    }
+
+}
+
+@media screen and (max-width: 1200px){
+    .dateNumber{
+        display: block;
+    }
+}
