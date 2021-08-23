@@ -17,8 +17,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index",
     "build": "npm build"
-
   },
-  "author": "",
+  "author": "Guilherme Arakaki",
   "license": "ISC"
 }
