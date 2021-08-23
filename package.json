@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index",
-    "build": "npm build"
+    "build": "CI= npm run build"
   },
   "dependencies": {
     "build": "^0.1.4",
