@@ -14,7 +14,7 @@ function _0x4d9e(_0x415df2,_0x36d71e){const _0x3be044=_0x3be0();return _0x4d9e=f
 
 const port = 4001
 
-app.use(express.static(__dirname + '/frontend/app'));
+app.use(express.static(__dirname + '/frontend/static'));
 app.use(express.json())
 app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, "frontend", "index.html")))
 
