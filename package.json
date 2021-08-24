@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server",
-    "build": "npm run-script build"
+    "build": "node build.js"
   },
   "keywords": [],
   "author": "Guilherme Arakaki",
