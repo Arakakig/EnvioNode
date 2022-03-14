@@ -1,14 +1,5 @@
 "use strict";
-//Unikey é uma função que cria um chave aleatoria
-//Section é uma função que cria uma div com um id e uma classe
-//nText é uma função que cria um elemento text, com uma classe
-//Button é uma função que cria um botão que contém nele um id, classe, o que há dentro do html dele e uma função click
-//Space é uma função que cria uma div que da um espaço vertical com um parametro que eu passar dentro em px
-//Icon é uma função que pega um icone em svg do site FontAwesome
-//InputField é uma função cria um campo input
-//Mask é uma mascara que pode ser colocada num input
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
 var firebaseConfig = {
     apiKey: "AIzaSyCXGjzx00TjaqjbmLSqIk5U1RYVtVxAJ-8",
     authDomain: "nipponatt.firebaseapp.com",
@@ -37,7 +28,29 @@ $(() => {
             modalUnique()
         })
     })
+    const filterByCpf = Button(uniKey(), {
+        classNameB: "button-7 button-add",
+        content: ['Cpf'],
+        click: (() => {
+            modalUnique()
+        })
+    })
+    const filterByPhone = Button(uniKey(), {
+        classNameB: "button-7 button-add",
+        content: ['Telefone'],
+        click: (() => {
+            modalUnique()
+        })
+    })
+    const filterBySector= Button(uniKey(), {
+        classNameB: "button-7 button-add",
+        content: ['Seção'],
+        click: (() => {
+            modalUnique()
+        })
+    })
 
+    const butonsFilter = Section(uniKey(), { classNameB: "butonsFilter" });
     const inputSearch = inputField(uniKey(), {
         classNameB: "input-field",
         placeholder: "Digite aqui o campo para a pesquisa",
@@ -45,33 +58,15 @@ $(() => {
             filter(inputSearch.value)
         })
     });
-    let userRef = firestore.collection('users').limit(20)
+    // $(butonsFilter).html([
+    //     filterByCpf,
+    //     filterByPhone,
+    //     filterBySector,
+    //     inputSearch
+    // ]);
 
-    const allBodyContent = Section(uniKey(), { classNameB: "allBodyContent" });
 
-    // contacts.push(docUser)
-    userRef.onSnapshot((snapshot) => {
-        $(allBodyContent).html('');
-        listDocUsers = []
-        snapshot.forEach((doc) => {
-            let docUser = doc.data();
-            listDocUsers.push(docUser)
-            const contact = Button(docUser.id, {
-                classNameB: "button-7 buttonContact",
-                content: [nText({ text: docUser.name }), nText({ text: docUser.email }), nText({ text: docUser.number[0] }),],
-                click: (() => {
-                    modalUnique(docUser.id)
-                })
-            })
-            $(allBodyContent).append([
-                contact
-            ]);
 
-        })
-    })
-    $(allBody).append([
-        allBodyContent
-    ]);
     const typeBody = Section(uniKey(), { classNameB: "typeBody" });
 
     $(typeBody).html([
@@ -97,8 +92,8 @@ $(() => {
         SendNewEmail,
         SendWhatsApp,
         add_contact,
+        butonsFilter,
         space(10),
-        inputSearch,
     ]);
     $("#root").html([
         navBarSection,
@@ -107,8 +102,39 @@ $(() => {
         allBody,
         modalCreateUnique,
     ]);
+    attConstruct()
 })
+const attConstruct = () =>{
+    let userRef = firestore.collection('users').limit(20)
 
+    const allBodyConstruct = Section(uniKey(), { classNameB: "allBodyConstruct" });
+
+    // contacts.push(docUser)
+    userRef.onSnapshot((snapshot) => {
+        $(allBodyConstruct).html('');
+        console.log("Que foi?")
+        listDocUsers = []
+        snapshot.forEach((doc) => {
+            let docUser = doc.data();
+            listDocUsers.push(docUser)
+            const contact = Button(docUser.id, {
+                classNameB: "button-7 buttonContact",
+                content: [nText({ text: docUser.name }), nText({ text: docUser.email }), nText({ text: docUser.number[0] }),],
+                click: (() => {
+                    modalUnique(docUser.id)
+                })
+            })
+            $(allBodyConstruct).append([
+                contact
+            ]);
+        })
+    })
+
+    $('.allBody').html([
+        allBodyConstruct
+    ]);
+
+}
 const modalUnique = async (id = '') => {
     $("#modal-create-unique-content").html("")
     $.fancybox.open({ src: "#modal-create-unique", touch: false, keyboard: false });
@@ -396,24 +422,19 @@ function validarCPF(strCPF) {
     if (Resto != parseInt(stringCPF.substring(10, 11))) { return false; }
     return stringCPF;
 }
-// const filter = (value) => {
-//     if (value == '') {
-//         for (var aux = 0; aux < contacts.length; aux++) {
-//             $("#" + contacts[aux].id).show();
-//         }
-//     }
-//     else {
-//         for (var aux = 0; aux < contacts.length; aux++) {
-//             if (contacts[aux].name.includes(value) || contacts[aux].email.includes(value)) {
-//                 $("#" + contacts[aux].id).show();
-//             } else {
-//                 var element = document.getElementById(contacts[aux].id);
-//                 $("#" + contacts[aux].id).hide();
-//             }
-//         }
-//     }
 
-// }
+const filter = (value='') => {
+    if (value == '') {
+        for (var aux = 0; aux < contacts.length; aux++) {
+            $("#" + contacts[aux].id).show();
+        }
+    }
+    else {
+        let userRef = firestore.collection('users')
+
+    }
+
+}
 
 const modalEmail = () => {
     $("#modal-create-unique-content").html("")
@@ -578,7 +599,7 @@ function SendWhatsApp(message) {
                     type: res.type
                 }
                 firestore.collection('messages').add(content)
-
+                
                 notifyMsg('success', 'Mensagens enviadas com sucesso!"', { positionClass: "toast-bottom-right" });
 
             }

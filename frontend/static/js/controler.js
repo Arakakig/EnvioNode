@@ -1,14 +1,5 @@
 "use strict";
-//Unikey é uma função que cria um chave aleatoria
-//Section é uma função que cria uma div com um id e uma classe
-//nText é uma função que cria um elemento text, com uma classe
-//Button é uma função que cria um botão que contém nele um id, classe, o que há dentro do html dele e uma função click
-//Space é uma função que cria uma div que da um espaço vertical com um parametro que eu passar dentro em px
-//Icon é uma função que pega um icone em svg do site FontAwesome
-//InputField é uma função cria um campo input
-//Mask é uma mascara que pode ser colocada num input
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
   var firebaseConfig = {
     apiKey: "AIzaSyCXGjzx00TjaqjbmLSqIk5U1RYVtVxAJ-8",
     authDomain: "nipponatt.firebaseapp.com",

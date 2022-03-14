@@ -62,40 +62,38 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true }));
 
 
-// Inicializamos el bot
 const SESSION_FILE_PATH = './session.json';
 let ws;
 let dataSession;
 
 
-/**
- * Verificamos se salvamos as credenciais para fazer o login 
- * esta etapa evita verificar novamente o QRCODE
- */
-const withSession = async () => {
-    dataSession = require(SESSION_FILE_PATH);
-    ws = new Client({ session: dataSession });
-    ws.on('ready', () => console.log('Cliente está pronto!'));
-    ws.on('auth_failure', () => {
-        console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **');
-        fs.unlinkSync('./session.json');
-    })
-    ws.on('message', async message => {
-        console.log(message);
-        console.log(message.author);
-        console.log(message.body);
-        let chat =  await message.getChat();
-        console.log(chat.name)
-    });
+// /**
+//  * Verificamos se salvamos as credenciais para fazer o login 
+//  * esta etapa evita verificar novamente o QRCODE
+//  */
+// const withSession = async () => {
+//     dataSession = require(SESSION_FILE_PATH);
+//     ws = new Client({ session: dataSession });
+//     ws.on('ready', () => console.log('Cliente está pronto!'));
+//     ws.on('auth_failure', () => {
+//         console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **');
+//         fs.unlinkSync('./session.json');
+//     })
+//     ws.on('message', async message => {
+//         console.log(message);
+//         console.log(message.author);
+//         console.log(message.body);
+//         let chat =  await message.getChat();
+//         console.log(chat.name)
+//     });
 
-    ws.initialize();
-}
+//     ws.initialize();
+// }
 
 
 /**
  * Geramos um QRCODE para iniciar a sessão
  */
-const withOutSession = () => {
     ws = new Client();
     // Geramos o QRCODE no Terminal
     ws.on('qr', qr => { qrcode.generate(qr, { small: true }); });
@@ -106,18 +104,20 @@ const withOutSession = () => {
     })
     ws.on('authenticated', (session) => {
         dataSession = session;
-        fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), (err) => {
-            if (err) console.log(err);
-        });
+        if(dataSession!=undefined){
+            fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), (err) => {
+                if (err) console.log(err);
+            });
+        }
+        
     });
     ws.initialize();
-}
 
 
 /**
  * Verificamos se existe um arquivo com credenciais!
 */
-(fs.existsSync(SESSION_FILE_PATH)) ? withSession() : withOutSession();
+// (fs.existsSync(SESSION_FILE_PATH)) ? withSession() : withOutSession();
 
 
 /**
@@ -139,19 +139,21 @@ app.post('/sendmessagewhatsapp', async (req, res) => {
     let array = [], messageContent;
     let numbersArray = []
     data.listDocUsers.forEach(element => {
-        console.log(element)
-        console.log(data)
+        // console.log(element)
+        // console.log(data)
         element.number.forEach(el=>{
             let numberUser = "55"+el
             numberUser = numberUser.replace(/\D+/g, '');
             numberUser = numberUser.replace('@c.us', '');
-            numbersArray.push(numberUser)
             numberUser = `${numberUser}@c.us`
             const message = data.message || `Olá, tudo bem?`;
             messageContent = message;
+            console.log(el)
             ws.sendMessage(numberUser, message).then(e=>{
-                console.log("Deu certo")
+                 numbersArray.push(numberUser)
+                console.log(numberUser)
             }).catch(error=>{
+                console.log(error)
                 array.push(element)
             });
         })
