@@ -34,6 +34,8 @@ build/Release
 
 # Dependency directories
 node_modules/
+.wwebjs_auth/
+.idea/
 jspm_packages/
 
 # TypeScript v1 declaration files
@@ -74,3 +76,4 @@ typings/
 
 # FuseBox cache
 .fusebox/
+.wwebjs_auth/session-client-one/AutofillStates/2020.11.2.164946/BD
