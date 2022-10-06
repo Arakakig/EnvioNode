@@ -47,6 +47,11 @@
     font-weight: 600;
     grid-template-columns: 40% 40% 20%;
 }
+.addPlanilha{
+    display: flex;
+    gap: 10px;
+    justify-content: end;
+}
 
 .button-add{
     color: #fff;

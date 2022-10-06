@@ -9,6 +9,8 @@ var firebaseConfig = {
     appId: "1:167548057096:web:43b9fd3e741c2b565b03bd",
     measurementId: "G-2HWGGX2KSB"
 };
+
+let planilhaValue;
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 let listDocUsers = [];
@@ -42,7 +44,7 @@ $(() => {
             modalUnique()
         })
     })
-    const filterBySector= Button(uniKey(), {
+    const filterBySector = Button(uniKey(), {
         classNameB: "button-7 button-add",
         content: ['Seção'],
         click: (() => {
@@ -81,6 +83,17 @@ $(() => {
             modalEmail()
         })
     })
+    
+
+    const addPlanilha = Section(uniKey(), { classNameB: "addPlanilha" });
+
+    const inputTeste = "<input id='fileupload' type='file' id='file-planilha' class='planilha-upload' name='fileupload'  />"
+    $(addPlanilha).html([
+        nText({ text: "Adicione uma planilha:", classNameB: "subtitle-modal" }),
+        inputTeste
+    ]);
+
+
     const SendWhatsApp = Button(uniKey(), {
         classNameB: "button-7 button-add",
         content: [Icon('paper-plane'), ' Enviar WhatsApp'],
@@ -89,6 +102,7 @@ $(() => {
         })
     })
     $(navBarSection).html([
+        addPlanilha,
         SendNewEmail,
         SendWhatsApp,
         add_contact,
@@ -102,9 +116,10 @@ $(() => {
         allBody,
         modalCreateUnique,
     ]);
+
     attConstruct()
 })
-const attConstruct = () =>{
+const attConstruct = () => {
     let userRef = firestore.collection('users').limit(20)
 
     const allBodyConstruct = Section(uniKey(), { classNameB: "allBodyConstruct" });
@@ -112,7 +127,6 @@ const attConstruct = () =>{
     // contacts.push(docUser)
     userRef.onSnapshot((snapshot) => {
         $(allBodyConstruct).html('');
-        console.log("Que foi?")
         listDocUsers = []
         snapshot.forEach((doc) => {
             let docUser = doc.data();
@@ -130,6 +144,15 @@ const attConstruct = () =>{
         })
     })
 
+    const selectElement = document.querySelector('.planilha-upload');
+
+    selectElement.addEventListener('change', async (event) => {
+        let formData = new FormData();
+        console.log(fileupload.files[0])
+        onFileChange(fileupload.files[0])
+        formData.append("fileupload", fileupload.files[0]);
+        
+    });
     $('.allBody').html([
         allBodyConstruct
     ]);
@@ -145,12 +168,12 @@ const modalUnique = async (id = '') => {
         if (doc && doc.exists) {
             docUser = doc.data();
         }
-        if(docUser && docUser.dueDate){
-            dateVenc = new Date(docUser.dueDate.seconds*1000);
+        if (docUser && docUser.dueDate) {
+            dateVenc = new Date(docUser.dueDate.seconds * 1000);
             dateVenc = dateVenc.toLocaleDateString("pt-BR")
         }
-        if(docUser && docUser.dateNasc){
-            dateNasc = new Date(docUser.dateNasc.seconds*1000);
+        if (docUser && docUser.dateNasc) {
+            dateNasc = new Date(docUser.dateNasc.seconds * 1000);
             dateNasc = dateNasc.toLocaleDateString("pt-BR")
         }
 
@@ -163,7 +186,7 @@ const modalUnique = async (id = '') => {
             email: '',
             number: [],
             sector: '',
-            dateNasc:dataAtualFormatada(),
+            dateNasc: dataAtualFormatada(),
             dueDate: dataAtualFormatada()
         }
         dateVenc = docUser.dueDate;
@@ -198,7 +221,7 @@ const modalUnique = async (id = '') => {
         mask: "00/00/0000",
         value: dateVenc
     });
-    
+
     const inputNumber = inputField(uniKey(), {
         classNameB: "input-field",
         placeholder: "Digite aqui o número do Cliente",
@@ -229,9 +252,9 @@ const modalUnique = async (id = '') => {
         value: docUser.sector
     });
 
-    $(inputSector).css("text-align","center")
-    $(inputSector).css("font-weight","700")
-    $(inputSector).css("font-size","20px")
+    $(inputSector).css("text-align", "center")
+    $(inputSector).css("font-weight", "700")
+    $(inputSector).css("font-size", "20px")
     const confirmContact = Button(uniKey(), {
         classNameB: "button button-add",
         content: [Icon('check'), ' Adicionar produto'],
@@ -239,23 +262,23 @@ const modalUnique = async (id = '') => {
             var isValid = true
             let testeNumber = inputNumber.value
             console.log(validarCPF(inputCpf.value))
-            if (inputEmail.value == '' || inputName.value == '' || testeNumber.length < 13 || inputDuedate.value=='' || inputDatNasc.value==''||
-            validarCPF(inputCpf.value)==false|| inputContract==''||inputSector=='') {
+            if (inputEmail.value == '' || inputName.value == '' || testeNumber.length < 13 || inputDuedate.value == '' || inputDatNasc.value == '' ||
+                validarCPF(inputCpf.value) == false || inputContract == '' || inputSector == '') {
                 isValid = false;
             }
             if (isValid) {
                 const dueDateSplit = inputDuedate.value.split("/");
                 const dateVencSplit = inputDuedate.value.split("/");
 
-                var timestampDueDate = new Date(dueDateSplit[2],(Number(dueDateSplit[1])-1).toString(),dueDateSplit[0]);
-                var timestampDateNasc= new Date(dateVencSplit[2],(Number(dateVencSplit[1])-1).toString(),dateVencSplit[0]);
+                var timestampDueDate = new Date(dueDateSplit[2], (Number(dueDateSplit[1]) - 1).toString(), dueDateSplit[0]);
+                var timestampDateNasc = new Date(dateVencSplit[2], (Number(dateVencSplit[1]) - 1).toString(), dateVencSplit[0]);
 
                 var phonesArray = [];
                 phonesArray.push(inputNumber.value)
-                if(inputNumber1.value!=''){
+                if (inputNumber1.value != '') {
                     phonesArray.push(inputNumber1.value)
                 }
-                if(inputNumber2.value!=''){
+                if (inputNumber2.value != '') {
                     phonesArray.push(inputNumber1.value)
                 }
                 docUser = {
@@ -294,23 +317,23 @@ const modalUnique = async (id = '') => {
             var isValid = true
             let testeNumber = inputNumber.value
 
-            if (inputEmail.value == '' || inputName.value == '' || testeNumber.length < 13 || inputDuedate.value=='' || inputDatNasc.value==''||
-            validarCPF(inputCpf.value)==false|| inputContract==''||inputSector=='') {
+            if (inputEmail.value == '' || inputName.value == '' || testeNumber.length < 13 || inputDuedate.value == '' || inputDatNasc.value == '' ||
+                validarCPF(inputCpf.value) == false || inputContract == '' || inputSector == '') {
                 isValid = false;
             }
             if (isValid) {
                 const dueDateSplit = inputDuedate.value.split("/");
                 const dateVencSplit = inputDatNasc.value.split("/");
 
-                var timestampDueDate = new Date(dueDateSplit[2],(Number(dueDateSplit[1])-1).toString(),dueDateSplit[0]);
-                var timestampDateNasc= new Date(dateVencSplit[2],(Number(dateVencSplit[1])-1).toString(),dateVencSplit[0]);
+                var timestampDueDate = new Date(dueDateSplit[2], (Number(dueDateSplit[1]) - 1).toString(), dueDateSplit[0]);
+                var timestampDateNasc = new Date(dateVencSplit[2], (Number(dateVencSplit[1]) - 1).toString(), dateVencSplit[0]);
                 console.log(timestampDateNasc)
                 var phonesArray = [];
                 phonesArray.push(inputNumber.value)
-                if(inputNumber1.value!=''){
+                if (inputNumber1.value != '') {
                     phonesArray.push(inputNumber1.value)
                 }
-                if(inputNumber2.value!=''){
+                if (inputNumber2.value != '') {
                     phonesArray.push(inputNumber1.value)
                 }
                 docUser = {
@@ -423,7 +446,7 @@ function validarCPF(strCPF) {
     return stringCPF;
 }
 
-const filter = (value='') => {
+const filter = (value = '') => {
     if (value == '') {
         for (var aux = 0; aux < contacts.length; aux++) {
             $("#" + contacts[aux].id).show();
@@ -448,20 +471,20 @@ const modalEmail = () => {
     const inputEmailContent = inputTextarea(uniKey(), {
         classNameB: 'input-field fscroll',
     });
-    // document.createElement("canvas")
-    // const inputTeste = "<input id='inputFile' type='file' multiple='multiple' ></input>"
+
 
     const SendEmailTo = Button(uniKey(), {
         classNameB: "button-7",
         content: [Icon('envelope'), ' Enviar Email'],
         click: (() => {
             // console.log(formData)
-            if(inputSubjectContent.value!=''&&inputEmailContent.value!=''){
-                SendEmail(inputSubjectContent.value,inputEmailContent.value)
+            if (inputSubjectContent.value != '' && inputEmailContent.value != '') {
+                SendEmail(inputSubjectContent.value, inputEmailContent.value)
                 $.fancybox.close()
             }
         })
     })
+
 
 
     const buttonsFinal = Section(uniKey(), { classNameB: "buttonsFinalModal" });
@@ -489,10 +512,10 @@ const modalEmail = () => {
     $("#modal-create-unique-content").html([
         allModal
     ])
-    
+
 }
 
-const modalWhatsApp = () =>{
+const modalWhatsApp = () => {
     $("#modal-create-unique-content").html("")
     $.fancybox.open({ src: "#modal-create-unique", touch: false, keyboard: false });
 
@@ -501,14 +524,14 @@ const modalWhatsApp = () =>{
     const inputMessageContent = inputTextarea(uniKey(), {
         classNameB: 'input-field fscroll',
     });
-   
+
 
     const SendWhatsAppTo = Button(uniKey(), {
         classNameB: "button-7",
         content: [Icon('paper-plane'), ' Enviar Mensagem'],
         click: (() => {
             // console.log(formData)
-            if(inputMessageContent.value!=''){
+            if (inputMessageContent.value != '') {
                 // SendEmail(inputSubjectContent.value,inputEmailContent.value)
                 SendWhatsApp(inputMessageContent.value)
                 $.fancybox.close()
@@ -547,7 +570,7 @@ function SendEmail(title, content) {
         contentType: 'application/json; charset=utf-8',
         type: 'post',
         dataType: 'json',
-        data: JSON.stringify({ title, content, listDocUsers})
+        data: JSON.stringify({ title, content, listDocUsers })
     })
         .done((res) => {
             console.log(res.data)
@@ -558,12 +581,12 @@ function SendEmail(title, content) {
             } else {
 
                 // let content = {
-                   
+
                 // }
                 console.log(res)
                 firestore.collection('messages').add({
-                    timeStamp:new Date(),
-                    content:res.messageContent,
+                    timeStamp: new Date(),
+                    content: res.messageContent,
                     fromTo: res.numbersArray,
                     type: res.type,
                     title: res.title
@@ -583,23 +606,22 @@ function SendWhatsApp(message) {
         contentType: 'application/json; charset=utf-8',
         type: 'post',
         dataType: 'json',
-        data: JSON.stringify({ message, listDocUsers})
+        data: JSON.stringify({ message, listDocUsers })
     })
         .done((res) => {
-            console.log(res.data)
             if (res.data.length > 0) {
                 res.data.forEach((doc) => {
                     notifyMsg('error', '<strong>Erro:</strong><br>Ocorreu um erro ao tentar enviar as mensagens ' + doc, { positionClass: "toast-bottom-right" });
                 })
             } else {
                 let content = {
-                    timeStamp:new Date(),
-                    message:res.messageContent,
+                    timeStamp: new Date(),
+                    message: res.messageContent,
                     fromTo: res.numbersArray,
                     type: res.type
                 }
                 firestore.collection('messages').add(content)
-                
+
                 notifyMsg('success', 'Mensagens enviadas com sucesso!"', { positionClass: "toast-bottom-right" });
 
             }
@@ -609,16 +631,56 @@ function SendWhatsApp(message) {
         })
 }
 
-function whatsappAba(){
+function whatsappAba() {
 
 }
+function  addonArray(e) {
+    teste = e.split(/\r?\n/);
+    console.log(teste[0])
+  }
 
-function dataAtualFormatada(){
+function onFileChange(e) {
+    console.log(e)
+    var fd = new FormData();
+    fd.append('theFile', e);
+    console.log(fd)
+    $.ajax({
+        url: '/uploadPlanilha',
+        contentType: 'application/json; charset=utf-8',
+        type: 'post',
+        processData: false, // important
+        contentType: false, // important
+        dataType: 'json',
+        data: fd
+    })
+        .done((res) => {
+            console.log(res.data)
+            if (res.data.length > 0) {
+                res.data.forEach((doc) => {
+                    notifyMsg('error', '<strong>Erro:</strong><br>Ocorreu um erro ao tentar enviar as mensagens ' + doc, { positionClass: "toast-bottom-right" });
+                })
+            } else {
+                let content = {
+                    timeStamp: new Date(),
+                    message: res.messageContent,
+                    fromTo: res.numbersArray,
+                    type: res.type
+                }
+                notifyMsg('success', 'Mensagens enviadas com sucesso!"', { positionClass: "toast-bottom-right" });
+
+            }
+        })
+        .catch((err) => {
+            //err
+        })
+};
+
+function dataAtualFormatada() {
     var data = new Date(),
-        dia  = data.getDate().toString(),
-        diaF = (dia.length == 1) ? '0'+dia : dia,
-        mes  = (data.getMonth()+1).toString(), //+1 pois no getMonth Janeiro começa com zero.
-        mesF = (mes.length == 1) ? '0'+mes : mes,
+        dia = data.getDate().toString(),
+        diaF = (dia.length == 1) ? '0' + dia : dia,
+        mes = (data.getMonth() + 1).toString(), //+1 pois no getMonth Janeiro começa com zero.
+        mesF = (mes.length == 1) ? '0' + mes : mes,
         anoF = data.getFullYear();
-    return diaF+"/"+mesF+"/"+anoF;
+    return diaF + "/" + mesF + "/" + anoF;
 }
