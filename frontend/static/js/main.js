@@ -81,6 +81,14 @@ $(() => {
             modalEmail()
         })
     })
+
+    const divPlanilha = Section(uniKey(), { classNameB: "addPlanilhaButton" });
+
+
+    const SendPlanilha =  $("<input type='file' class='inputPlanilha button-7 button-add' accept='.csv' onchange='SendPlanilha(event.target.files[0])'/>");
+
+    $(divPlanilha).append(Icon('plus'));
+
     const SendWhatsApp = Button(uniKey(), {
         classNameB: "button-7 button-add",
         content: [Icon('paper-plane'), ' Enviar WhatsApp'],
@@ -88,7 +96,13 @@ $(() => {
             modalWhatsApp()
         })
     })
+
+    $(divPlanilha).html([
+        SendPlanilha
+    ]);
+
     $(navBarSection).html([
+        SendPlanilha,
         SendNewEmail,
         SendWhatsApp,
         add_contact,
@@ -112,14 +126,14 @@ const attConstruct = () =>{
     // contacts.push(docUser)
     userRef.onSnapshot((snapshot) => {
         $(allBodyConstruct).html('');
-        console.log("Que foi?")
         listDocUsers = []
         snapshot.forEach((doc) => {
             let docUser = doc.data();
             listDocUsers.push(docUser)
+            console.log(docUser)
             const contact = Button(docUser.id, {
                 classNameB: "button-7 buttonContact",
-                content: [nText({ text: docUser.name }), nText({ text: docUser.email }), nText({ text: docUser.number[0] }),],
+                content: [nText({ text: docUser.name }), nText({ text: docUser.email }), nText({ text: typeof docUser.number=='object'?docUser.number[0]:docUser.number }),],
                 click: (() => {
                     modalUnique(docUser.id)
                 })
@@ -449,7 +463,7 @@ const modalEmail = () => {
         classNameB: 'input-field fscroll',
     });
     // document.createElement("canvas")
-    // const inputTeste = "<input id='inputFile' type='file' multiple='multiple' ></input>"
+
 
     const SendEmailTo = Button(uniKey(), {
         classNameB: "button-7",
@@ -543,7 +557,7 @@ const modalWhatsApp = () =>{
 
 function SendEmail(title, content) {
     $.ajax({
-        url: '/sendemail',
+        url: 'https://whatapp-envio.herokuapp.com/sendemail',
         contentType: 'application/json; charset=utf-8',
         type: 'post',
         dataType: 'json',
@@ -579,7 +593,7 @@ function SendEmail(title, content) {
 
 function SendWhatsApp(message) {
     $.ajax({
-        url: '/sendmessagewhatsapp',
+        url: 'https://whatapp-envio.herokuapp.com/sendmessagewhatsapp',
         contentType: 'application/json; charset=utf-8',
         type: 'post',
         dataType: 'json',
@@ -609,8 +623,60 @@ function SendWhatsApp(message) {
         })
 }
 
-function whatsappAba(){
+function SendPlanilha(e){
+    console.log(e)
+    let arrayReader = [];
+    const file = e;
+    const reader = new FileReader();
+    let aux;
+    reader.readAsText(file);
+    reader.onload = e => {
+        let result = e.target.result;
+        aux = result.split(/\r?\n/);
+        aux.forEach((elemento, index) => {
+            let dados = elemento.split(',');
+            let data = {
+                name: dados[0],
+                number: dados[1],
+                email: dados[2],
+                setor: dados[3]!=undefined?dados[3]:'',
+                id: uniKey()
+            }
+            firestore.collection('users').doc(data.id).set(data);
+        })
+    };
 
+
+    
+    // $.ajax({
+    //     url: '/sendPlanilha',
+    //     contentType: 'application/json; charset=utf-8',
+    //     type: 'post',
+    //     dataType: 'json',
+    //     data: JSON.stringify({aux})
+    // })
+    //     .done((res) => {
+    //         console.log(res.data)
+    //         if (res.data.length > 0) {
+    //             res.data.forEach((doc) => {
+    //                 notifyMsg('error', '<strong>Erro:</strong><br>Ocorreu um erro ao fazer Upload da Planilha' + doc, { positionClass: "toast-bottom-right" });
+    //             })
+    //         } else {
+    //             let content = {
+    //                 timeStamp:new Date(),
+    //                 message:res.messageContent,
+    //                 fromTo: res.numbersArray,
+    //                 type: res.type
+    //             }
+    //             firestore.collection('messages').add(content)
+                
+    //             notifyMsg('success', 'Planilha Adicionada com Sucesso!"', { positionClass: "toast-bottom-right" });
+
+    //         }
+    //     })
+    //     .catch((err) => {
+    //         notifyMsg('error', '<strong>Erro:</strong><br>Ocorreu um erro ao fazer Upload da Planilha' + err, { positionClass: "toast-bottom-right" });
+    //     })
 }
 
 function dataAtualFormatada(){

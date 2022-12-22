@@ -82,3 +82,21 @@
         display: block;
     }
 }
+
+
+.inputPlanilha{
+    max-width: 150px;
+    color: transparent;
+}
+
+.inputPlanilha::-webkit-file-upload-button {
+    visibility: hidden;
+  }
+.inputPlanilha::before {
+    content: 'Adicionar Planilha';
+    outline: none;
+    white-space: nowrap;
+    cursor: pointer;
+    text-shadow: 1px 1px #fff;
+  }
+
