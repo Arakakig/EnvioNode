@@ -105,8 +105,7 @@ const withSession = async () => {
     ws = new Client({
         authStrategy: new LegacySessionAuth({
             session: sessionData
-        }),
-
+        })
     });
     ws.on('ready', () => console.log('Cliente está pronto!'));
     ws.on('auth_failure', () => {
@@ -129,8 +128,6 @@ const withOutSession = async () => {
     ws = new Client({
         puppeteer: {
             executablePath: '/usr/bin/brave-browser-stable',
-            headless: true,
-            args: ['--no-sandbox']
         },
         authStrategy: new LocalAuth({
             clientId: "client-one"
