@@ -18,17 +18,13 @@ const readline = require('readline');
 
 const port = process.env.PORT || 4001;
 
-app.use(express.static(path.join(__dirname, "./frontend")));
-
+app.use(express.static(__dirname + '/frontend/static'));
 app.use(express.json())
-app.get('*', (req, res) => res.sendFile(path.resolve(__dirname, "./frontend/index.html"),
-    function (err) {
-        if (err) {
-            res.status(500).send(err);
-        }
-    }))
+app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, "frontend", "static")))
 
-
+app.get("/*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
+});
 
 
 

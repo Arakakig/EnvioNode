@@ -1118,7 +1118,12 @@ HEAD
   -o-transition: all 0.5s ease;
   transition: all 0.5s ease;
 }
-
+.arrow-down {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: var(--text-color-light);
+}
 .move-list-attr .remove-icon-box {
   display: none;
 }

@@ -12,6 +12,7 @@ var firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 let listDocUsers = [];
+let listDocSetor = [];
 var firestore = firebase.firestore();
 
 $(() => {
@@ -126,11 +127,14 @@ const attConstruct = () =>{
     // contacts.push(docUser)
     userRef.onSnapshot((snapshot) => {
         $(allBodyConstruct).html('');
-        listDocUsers = []
+        listDocUsers = [];
+        listDocSetor = [];
         snapshot.forEach((doc) => {
+         
             let docUser = doc.data();
+            let testeAux = listDocSetor.indexOf(docUser.setor);
+            testeAux>=0?null:listDocSetor.push(docUser.setor);
             listDocUsers.push(docUser)
-            console.log(docUser)
             const contact = Button(docUser.id, {
                 classNameB: "button-7 buttonContact",
                 content: [nText({ text: docUser.name }), nText({ text: docUser.email }), nText({ text: typeof docUser.number=='object'?docUser.number[0]:docUser.number }),],
@@ -240,7 +244,7 @@ const modalUnique = async (id = '') => {
     const inputSector = inputField(uniKey(), {
         classNameB: "input-field",
         placeholder: "Digite aqui o setor do Cliente",
-        value: docUser.sector
+        value: docUser.setor
     });
 
     $(inputSector).css("text-align","center")
@@ -278,7 +282,7 @@ const modalUnique = async (id = '') => {
                     cpf: inputCpf.value,
                     email: inputEmail.value,
                     number: phonesArray,
-                    sector: inputSector.value,
+                    setor: inputSector.value,
                     dueDate: timestampDueDate,
                     dateNasc: timestampDateNasc,
                 }
@@ -333,7 +337,7 @@ const modalUnique = async (id = '') => {
                     cpf: inputCpf.value,
                     email: inputEmail.value,
                     number: phonesArray,
-                    sector: inputSector.value,
+                    setor: inputSector.value,
                     dueDate: timestampDueDate,
                     dateNasc: timestampDateNasc,
                 }
@@ -509,8 +513,15 @@ const modalEmail = () => {
 const modalWhatsApp = () =>{
     $("#modal-create-unique-content").html("")
     $.fancybox.open({ src: "#modal-create-unique", touch: false, keyboard: false });
-
-
+    let testeAux = listDocSetor.indexOf('Todos os Setores');
+    testeAux>=0?null:listDocSetor.push('Todos os Setores');
+    let valueItem = listDocSetor[0];
+    const inputSelectItem= inputSelect(uniKey(), {
+        classNameB: "input-field",
+        options: listDocSetor,
+        onchange: (value) => { console.log(value.value)},
+        value: valueItem,
+    });
 
     const inputMessageContent = inputTextarea(uniKey(), {
         classNameB: 'input-field fscroll',
@@ -524,7 +535,8 @@ const modalWhatsApp = () =>{
             // console.log(formData)
             if(inputMessageContent.value!=''){
                 // SendEmail(inputSubjectContent.value,inputEmailContent.value)
-                SendWhatsApp(inputMessageContent.value)
+                console.log(valueItem)
+                // SendWhatsApp(inputMessageContent.value, inputSelectItem.value)
                 $.fancybox.close()
             }
         })
@@ -544,6 +556,9 @@ const modalWhatsApp = () =>{
     $(allModal).html([
         nText({ text: "Enviar Mensagem", classNameB: "title-modal" }),
         space(20),
+        nText({ text: "Setor a qual deseja enviar a mensagem", classNameB: "subtitle-modal" }),
+        inputSelectItem,
+        space(20),
         nText({ text: "Conteúdo do Mensagem", classNameB: "subtitle-modal" }),
         inputMessageContent,
         space(),
@@ -557,7 +572,7 @@ const modalWhatsApp = () =>{
 
 function SendEmail(title, content) {
     $.ajax({
-        url: 'https://whatapp-envio.herokuapp.com/sendemail',
+        url: '/sendemail',
         contentType: 'application/json; charset=utf-8',
         type: 'post',
         dataType: 'json',
@@ -570,10 +585,7 @@ function SendEmail(title, content) {
                     notifyMsg('error', '<strong>Erro:</strong><br>Ocorreu um erro ao tentar enviar o email ' + doc, { positionClass: "toast-bottom-right" });
                 })
             } else {
-
-                // let content = {
-                   
-                // }
+               
                 console.log(res)
                 firestore.collection('messages').add({
                     timeStamp:new Date(),
@@ -591,13 +603,25 @@ function SendEmail(title, content) {
         })
 }
 
-function SendWhatsApp(message) {
+function SendWhatsApp(message, setor = 'Todos os Setores') {
+    let listDocUsersSend = [];
+    console.log(setor)
+    if(setor!='Todos os Setores'){
+        listDocUsers.filter((doc) => {
+            if(doc.setor == setor){
+                listDocUsersSend.push(doc)
+            }
+        })
+    }else{
+        listDocUsersSend = listDocUsers
+    }
+    console.log(listDocUsersSend)
     $.ajax({
-        url: 'https://whatapp-envio.herokuapp.com/sendmessagewhatsapp',
+        url: '/sendmessagewhatsapp',
         contentType: 'application/json; charset=utf-8',
         type: 'post',
         dataType: 'json',
-        data: JSON.stringify({ message, listDocUsers})
+        data: JSON.stringify({ message, listDocUsersSend})
     })
         .done((res) => {
             console.log(res.data)

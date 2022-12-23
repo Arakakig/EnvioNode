@@ -276,7 +276,7 @@ function inputSelect(ind, opt) {
     });
 
     $.each(opt.options, function (index, value) {
-        $(obj).append('<option value="' + value + '">' + index + '</option>');
+        $(obj).append('<option value="' + value + '">' + value + '</option>');
     })
 
     $('option[value="' + opt.selected + '"]', obj).prop('selected', 'selected');
