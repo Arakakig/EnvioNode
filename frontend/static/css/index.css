@@ -12,10 +12,10 @@
     font-weight: 600;
 }
 .butonsFilter{
-    display: grid;
-    grid-template-columns: 50px 50px 50px auto;
-    text-align: left;
-    align-items: center;
+    display: flex;
+    text-align: right;
+    justify-content: right;
+    padding: 20px;
 }
 .butonsFilter input{
     height: 50px;
@@ -85,10 +85,13 @@
 
 
 .inputPlanilha{
-    max-width: 150px;
-    color: transparent;
+    max-width: 170px;
+    background-color: var(--background-medium);
 }
-
+.divPlanilha{
+    display: flex;
+    justify-content: center;
+}
 .inputPlanilha::-webkit-file-upload-button {
     visibility: hidden;
   }
@@ -97,6 +100,14 @@
     outline: none;
     white-space: nowrap;
     cursor: pointer;
-    text-shadow: 1px 1px #fff;
   }
 
+  .inputArquivo::before {
+    content: 'Adicionar Arquivo' !important;
+    outline: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+.inputDivContent{
+    display: none;
+}

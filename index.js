@@ -1,12 +1,15 @@
 const express = require('express');
 const path = require("path");
 const app = express();
-// const nodemailer = require('nodemailer');
+const multer = require('multer');
+const nodemailer = require('nodemailer');
 const fs = require('fs');
 const qrcode = require('qrcode-terminal');
 const { Client, MessageMedia, LocalAuth, LegacySessionAuth } = require('whatsapp-web.js');
 const cors = require('cors');
 const readline = require('readline');
+require('buffer');
+
 // const xl = require('excel4node');
 // const wb = new xl.Workbook();
 // const tabela = wb.addWorksheet('Worksheet Name');
@@ -21,7 +24,7 @@ const port = process.env.PORT || 4001;
 app.use(express.static(__dirname + '/frontend/static'));
 app.use(express.json())
 app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, "frontend", "static")))
-
+const upload = multer({ dest: 'uploads/' });
 app.get("/*", (req, res) => {
     res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
 });
@@ -43,10 +46,6 @@ function transformNumber(number) {
 
 
 
-
-// app.get("/*", (req, res) => {
-//     res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
-// });
 
 // app.post('/sendemail', async (req, res) => {
 //     const data = req.body;
@@ -158,24 +157,64 @@ const withOutSession = async () => {
 (fs.existsSync(SESSION_FILE_PATH)) ? withSession() : withOutSession();
 
 
-const sendMessageMedia = (number, fileName, caption) => {
-    number = `556781566794@c.us`
-    const media = MessageMedia.fromFilePath(`teste.jpeg`)
-    ws.sendMessage(number, media, { caption: 'teste.jpeg' });
+
+
+const sendMessageMedia = (number = `556781566794@c.us`, file, caption = '') => {
+    const data = fs.readFileSync(file.path);
+    const media = new MessageMedia(file.mimetype, data.toString('base64'), file.originalname, file.size);
+    ws.sendMessage(number, media);
 }
 
 
-app.post('/sendmessagewhatsapp', async (req, res) => {
+app.post('/sendmessagewhatsapp', upload.single('file'), async (req, res) => {
+
+    const file = req.file;
+
     const data = req.body;
 
     let array = [], messageContent;
     let numbersArray = []
-    console.log(data)
-    let dataTable = []
-    data.listDocUsers.forEach(element => {
-        if (typeof element.number == 'object') {
-            element.number.forEach(el => {
-                let numberUser = "55" + el
+    let numberSend = JSON.parse(data.listDocUsersSend);
+    let dataTable = [];
+    numberSend.forEach(element => {
+        setTimeout(() => {
+            if (typeof element.number == 'object') {
+                element.number.forEach(el => {
+                    let numberUser = "55" + el
+                    numberUser = numberUser.replace(/\D+/g, '');
+                    numberUser = numberUser.replace('@c.us', '');
+                    numberUser = `${numberUser}@c.us`
+                    if (numberUser.length === 18 && numberUser[4] === '9') {
+                        numberUser = numberUser.slice(0, 4) + numberUser.slice(5);
+                    }
+                    const message = data.message || `Olá, tudo bem?`;
+                    messageContent = message;
+                    ws.sendMessage(numberUser, message).then(e => {
+                        if (file != null && file != undefined) {
+                            sendMessageMedia(`556781566794@c.us`, file)
+                        }
+                        numbersArray.push(numberUser)
+                        dataTable.push({
+                            name: element.name,
+                            numero: el,
+                            email: element.email,
+                            enviou: 'Sim'
+                        })
+                        createFile(dataTable)
+                    }).catch(error => {
+                        dataTable.push({
+                            name: element.name,
+                            numero: el,
+                            email: element.email,
+                            enviou: 'Não'
+                        })
+                        createFile(dataTable)
+                        array.push(element)
+                        console.log(error)
+                    });
+                })
+            } else {
+                let numberUser = "55" + element.number
                 numberUser = numberUser.replace(/\D+/g, '');
                 numberUser = numberUser.replace('@c.us', '');
                 numberUser = `${numberUser}@c.us`
@@ -185,114 +224,50 @@ app.post('/sendmessagewhatsapp', async (req, res) => {
                 const message = data.message || `Olá, tudo bem?`;
                 messageContent = message;
                 ws.sendMessage(numberUser, message).then(e => {
+                    if (file != null && file != undefined) {
+                        sendMessageMedia(numberUser, file, 'imagem')
+                    }
                     numbersArray.push(numberUser)
                     dataTable.push({
                         name: element.name,
-                        numero: el,
-                        name: element.email,
-                        idade: element.idade,
+                        numero: element.number,
+                        email: element.email,
                         enviou: 'Sim'
                     })
+                    createFile(dataTable)
                 }).catch(error => {
                     dataTable.push({
                         name: element.name,
-                        numero: el,
-                        name: element.email,
-                        idade: element.idade,
-                        idade: element.idade,
+                        numero: element.number,
+                        email: element.email,
                         enviou: 'Não'
                     })
+                    createFile(dataTable)
                     array.push(element)
                     console.log(error)
                 });
-            })
-        } else {
-            let numberUser = "55" + element.number
-            numberUser = numberUser.replace(/\D+/g, '');
-            numberUser = numberUser.replace('@c.us', '');
-            numberUser = `${numberUser}@c.us`
-            if (numberUser.length === 18 && numberUser[4] === '9') {
-                numberUser = numberUser.slice(0, 4) + numberUser.slice(5);
+
             }
-
-
-            const message = data.message || `Olá, tudo bem?`;
-            messageContent = message;
-            ws.sendMessage(numberUser, message).then(e => {
-                numbersArray.push(numberUser)
-                dataTable.push({
-                    name: element.name,
-                    numero: element.number,
-                    name: element.email,
-                    idade: element.idade,
-                    enviou: 'Sim'
-                })
-            }).catch(error => {
-                dataTable.push({
-                    name: element.name,
-                    numero: element.number,
-                    name: element.email,
-                    idade: element.idade,
-                    idade: element.idade,
-                    enviou: 'Não'
-                })
-                array.push(element)
-                console.log(error)
-            });
-
-        }
+        }, 10 * 1000 );
     })
-    // emitExcel(dataTable)
     res.send({ msg: 'done', data: array, numbersArray, messageContent, type: 'whatsApp' })
 })
 
 
-// function emitExcel(dataTable) {
-//     const headingColumnNames = [
-//         "Nome",
-//         "Email",
-//         "Celular",
-//     ]
-//     let headingColumnIndex = 1; //diz que começará na primeira linha
-//     headingColumnNames.forEach(heading => {
-//         tabela.cell(1, headingColumnIndex++).string(heading);
-//     });
+function createFile(data) {
+    console.log(data)
+    const csvDataResult = data.map(object => `${object.name},${object.numero},${object.email},${object.enviou} \n`).join('');
+    // Escrevendo a string no arquivo
+    fs.writeFile('Enviados.csv', csvDataResult, (err) => {
+        if (err) throw err;
+        console.log('The file has been saved!');
+    });
 
-//     let rowIndex = 2;
-//     dataTable.forEach(record => {
-//         let columnIndex = 1;
-//         Object.keys(record).forEach(columnName => {
-//             tabela.cell(rowIndex, columnIndex++)
-//                 .string(record[columnName])
-//         });
-//         rowIndex++;
-//     });
-
-//     wb.write('ArquivoExcel.xlsx');
-// }
-
-
-const sendMidia = (req, res) => {
-    const { number, fileName, caption } = req.body
-    sendMessageMedia(number, fileName, caption)
-    res.send({ status: 'Enviado mensagem multimidia!' })
 }
 
-app.post('/sendMedia', sendMidia);
+
 
 app.listen(port, () => console.log(`Running on port ${port}`))
 
 
 
-
-
-
-// eventEmitter.emit("myEvent", "Emitted Statement");
-// set
-// rl.emit((value) => {
-//     console.log(value);
-//     fs.writeFile('PessoasPresentes.txt', JSON.stringify(words[0]), (err) => {
-//         if (err) console.log(err);
-//     });
-//     // expected output: "Success!"
-// });
