@@ -11,7 +11,7 @@ var firebaseConfig = {
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-let listDocUserAux = [],listDocUsers = [];
+let listDocUserAux = [], listDocUsers = [];
 let listDocSetor = ['Todos os Setores', 'Cassems', 'Nippon', 'Nipo'];
 var firestore = firebase.firestore();
 let fileContent;
@@ -114,7 +114,8 @@ $(() => {
     ]);
     $("#root").html([
         navBarSection,
-        butonsFilter,
+        space(10),
+        // butonsFilter,
         typeBody,
         allBody,
         modalCreateUnique,
@@ -380,6 +381,7 @@ function validarCPF(strCPF) {
 }
 
 const filter = (value = '') => {
+    listDocUserAux
     if (value == '') {
         for (var aux = 0; aux < contacts.length; aux++) {
             $("#" + contacts[aux].id).show();
