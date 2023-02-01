@@ -159,7 +159,7 @@ const withOutSession = async () => {
 
 
 
-const sendMessageMedia = (number = `556781566794@c.us`, file, caption = '') => {
+const sendMessageMedia = (number, file, caption = '') => {
     const data = fs.readFileSync(file.path);
     const media = new MessageMedia(file.mimetype, data.toString('base64'), file.originalname, file.size);
     ws.sendMessage(number, media);
@@ -191,7 +191,7 @@ app.post('/sendmessagewhatsapp', upload.single('file'), async (req, res) => {
                     messageContent = message;
                     ws.sendMessage(numberUser, message).then(e => {
                         if (file != null && file != undefined) {
-                            sendMessageMedia(`556781566794@c.us`, file)
+                            sendMessageMedia(numberUser, file)
                         }
                         numbersArray.push(numberUser)
                         dataTable.push({
