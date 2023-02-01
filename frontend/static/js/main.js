@@ -541,7 +541,6 @@ const modalAddPlanilha = async () => {
 
     const SendArquivoWhatsApp = $("<input type='file' accept='image/png, image/jpeg' class='inputArquivo inputPlanilha button-7 ' onchange='setArquivoContent(event.target.files[0])';/>");
 
-
     $(inputDivContent).html([
         nText({ text: "Conteúdo do Mensagem", classNameB: "subtitle-modal" }),
         inputMessageContent,

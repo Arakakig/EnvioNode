@@ -183,10 +183,11 @@ app.post('/sendmessagewhatsapp', upload.single('file'), async (req, res) => {
                     let numberUser = "55" + el
                     numberUser = numberUser.replace(/\D+/g, '');
                     numberUser = numberUser.replace('@c.us', '');
+                    let numberUserAux = numberUser;
                     numberUser = `${numberUser}@c.us`
                     if (numberUser.length === 18 && numberUser[4] === '9') {
                         numberUser = numberUser.slice(0, 4) + numberUser.slice(5);
-                    }
+                    }  
                     const message = data.message || `Olá, tudo bem?`;
                     messageContent = message;
                     ws.sendMessage(numberUser, message).then(e => {
@@ -214,8 +215,12 @@ app.post('/sendmessagewhatsapp', upload.single('file'), async (req, res) => {
                     });
                 })
             } else {
-                let numberUser = "55" + element.number
+               
+                let numberUser = "55" + element.number;
                 numberUser = numberUser.replace(/\D+/g, '');
+                if(numberUser.length<=12){
+                    numberUser = numberUser.slice(0, 2)+ '67' + numberUser.slice(5);
+                }
                 numberUser = numberUser.replace('@c.us', '');
                 numberUser = `${numberUser}@c.us`
                 if (numberUser.length === 18 && numberUser[4] === '9') {
