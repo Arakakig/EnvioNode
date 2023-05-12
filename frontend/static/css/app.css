@@ -445,9 +445,9 @@ HEAD
 .input-field {
   border-radius: 5px;
   padding: 10px;
-  font-weight: 600;
+  font-weight: 600 !important;
   background-color: var(--background-medium);
-  color: var(--text-color-light);
+  color: #111111 !important;
   border: 0;
   -webkit-appearance: none;
   box-sizing: border-box;
