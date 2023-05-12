@@ -231,6 +231,7 @@ app.post('/cancelwhats', (req, res) => {
 })
 
 
+
 function createFile(data) {
     console.log(data)
     const csvDataResult = data.map(object => `${object.name},${object.numero},${object.email},${object.enviou} \n`).join('');

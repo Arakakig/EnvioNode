@@ -199,7 +199,6 @@ const modalUnique = async (id = '') => {
     });
 
 
-
     const deletContact = Button(uniKey(), {
         classNameB: "button-3",
         content: [Icon('user-times'), ' Remover contato'],
