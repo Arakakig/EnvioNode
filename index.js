@@ -2,24 +2,14 @@ const express = require('express');
 const path = require("path");
 const app = express();
 const multer = require('multer');
-const nodemailer = require('nodemailer');
 const fs = require('fs');
 const qrcode = require('qrcode-terminal');
-const { Client, MessageMedia, LocalAuth, LegacySessionAuth } = require('whatsapp-web.js');
+const { Client, MessageMedia, LocalAuth, LegacySessionAuth, Buttons, List } = require('whatsapp-web.js');
 const cors = require('cors');
-const readline = require('readline');
+const async = require('async');
 require('buffer');
 
-// const xl = require('excel4node');
-// const wb = new xl.Workbook();
-// const tabela = wb.addWorksheet('Worksheet Name');
-
-
-// const user = "guipecoisarakaki@gmail.com"
-// function _0x4d9e(_0x415df2, _0x36d71e) { const _0x3be044 = _0x3be0(); return _0x4d9e = function (_0x4d9eba, _0x5cf593) { _0x4d9eba = _0x4d9eba - 0x65; let _0x110e2b = _0x3be044[_0x4d9eba]; return _0x110e2b; }, _0x4d9e(_0x415df2, _0x36d71e); } function _0x3be0() { const _0x3a4471 = ['5535090zjirvi', '1229150eNpaxE', '1775520EEoMga', '1166808KMBwPx', '1yzmIoF', '1046176KVNrQq', '11376vzzbHg', '836928laongq', 'arakaki34', '336RBfavn']; _0x3be0 = function () { return _0x3a4471; }; return _0x3be0(); } const _0x46f2db = _0x4d9e; (function (_0x44d0fb, _0x310942) { const _0xb7a64b = _0x4d9e, _0x516a58 = _0x44d0fb(); while (!![]) { try { const _0x115ba8 = parseInt(_0xb7a64b(0x6d)) / 0x1 * (-parseInt(_0xb7a64b(0x6e)) / 0x2) + -parseInt(_0xb7a64b(0x66)) / 0x3 + parseInt(_0xb7a64b(0x6b)) / 0x4 + -parseInt(_0xb7a64b(0x6a)) / 0x5 + parseInt(_0xb7a64b(0x6c)) / 0x6 + -parseInt(_0xb7a64b(0x68)) / 0x7 * (-parseInt(_0xb7a64b(0x65)) / 0x8) + parseInt(_0xb7a64b(0x69)) / 0x9; if (_0x115ba8 === _0x310942) break; else _0x516a58['push'](_0x516a58['shift']()); } catch (_0x9e23aa) { _0x516a58['push'](_0x516a58['shift']()); } } }(_0x3be0, 0x42d38)); const pass = _0x46f2db(0x67);
-
-
-const port = process.env.PORT || 4001;
+const port = process.env.PORT || 4006;
 
 app.use(express.static(__dirname + '/frontend/static'));
 app.use(express.json())
@@ -28,7 +18,6 @@ const upload = multer({ dest: 'uploads/' });
 app.get("/*", (req, res) => {
     res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
 });
-
 
 
 
@@ -43,45 +32,6 @@ function transformNumber(number) {
     }
     return number;
 }
-
-
-
-
-// app.post('/sendemail', async (req, res) => {
-//     const data = req.body;
-//     let array = [], messageContent = data.content, title = data.title;
-//     let numbersArray = []
-//     await data.listDocUsers.forEach(element => {
-//         numbersArray.push(element.email)
-//         const transporter = nodemailer.createTransport({
-//             host: "smtp.gmail.com",
-//             port: 587,
-//             auth: { user, pass },
-//         })
-//         transporter.sendMail({
-//             from: user,
-//             to: element.email,
-//             replyTo: "guilherme.arakaki@ufms.br",
-//             subject: `Olá ${element.name},` + data.title,
-//             html: data.content,
-//             attachments: [{
-//                 filename: 'teste1.jpeg',
-//                 path: 'teste1.jpeg',
-//                 contentType: 'application/jpeg'
-//             }],
-//         }).then(info => {
-//             // arraySucefull.push(element)
-//         }).catch(error => {
-//             array.push(element)
-//         })
-//         console.log(element)
-//     });
-//     res.send({ msg: 'done', data: array, numbersArray, messageContent, type: 'email', title })
-
-
-// })
-
-// API
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true }));
 
@@ -107,11 +57,6 @@ const withSession = async () => {
         console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **');
         fs.unlinkSync('./session.json');
     })
-    ws.on('message', async message => {
-        let chat = await message.getChat();
-    });
-
-
     ws.initialize();
 }
 
@@ -160,103 +105,161 @@ const withOutSession = async () => {
 
 
 const sendMessageMedia = (number, file, caption = '') => {
-    const data = fs.readFileSync(file.path);
-    const media = new MessageMedia(file.mimetype, data.toString('base64'), file.originalname, file.size);
-    ws.sendMessage(number, media);
+    file.forEach(element => {
+        const data = fs.readFileSync(element.path);
+        const media = new MessageMedia(element.mimetype, data.toString('base64'), element.originalname, element.size);
+        ws.sendMessage(number, media);
+    });
+
 }
 
+const sendButton = (number) => {
+    const productsList = new List(
+        "Here's our list of products at 50% off",
+        "View all products",
+        [
+            {
+                title: "Products list",
+                rows: [
+                    { id: "apple", title: "Apple" },
+                    { id: "mango", title: "Mango" },
+                    { id: "banana", title: "Banana" },
+                ],
+            },
+        ],
+        "Please select a product"
+    );
+    let text = 'Olá, tudo bem? Aqui é da juventude da Primeira Batista. Gostariamos de fazer uma pesquisa com você! Você atualmente está inserido em qual dessas redes?';
+    let title = "Você atualmente está inserido em qual dessas redes?";
+    let button = new Buttons(text, [{ body: 'Livres' }, { body: 'Flow' }], title, 'Ficaremos felizes em saber!');
 
-app.post('/sendmessagewhatsapp', upload.single('file'), async (req, res) => {
+    ws.sendMessage(number, button);
+}
 
-    const file = req.file;
+function toTitleCase(str) {
+    return str.replace(
+        /\w\S*/g,
+        function (txt) {
+            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+        }
+    );
+}
+
+let isSending = false;
+app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
+    if (isSending) {
+        return res.status(400).json({ message: 'Já existe uma mensagem sendo enviada' });
+    }
+    isSending = true;
+    const files = req.files;
 
     const data = req.body;
-
+    // sendButton(data.number);
+    const phoneNumbers = [];
     let array = [], messageContent;
     let numbersArray = []
     let numberSend = JSON.parse(data.listDocUsersSend);
     let dataTable = [];
-    numberSend.forEach(element => {
-        setTimeout(() => {
-            if (typeof element.number == 'object') {
-                element.number.forEach(el => {
-                    let numberUser = "55" + el
-                    numberUser = numberUser.replace(/\D+/g, '');
-                    numberUser = numberUser.replace('@c.us', '');
-                    let numberUserAux = numberUser;
-                    numberUser = `${numberUser}@c.us`
-                    if (numberUser.length === 18 && numberUser[4] === '9') {
-                        numberUser = numberUser.slice(0, 4) + numberUser.slice(5);
-                    }  
-                    const message = data.message || `Olá, tudo bem?`;
-                    messageContent = message;
-                    ws.sendMessage(numberUser, message).then(e => {
-                        if (file != null && file != undefined) {
-                            sendMessageMedia(numberUser, file)
-                        }
-                        numbersArray.push(numberUser)
-                        dataTable.push({
-                            name: element.name,
-                            numero: el,
-                            email: element.email,
-                            enviou: 'Sim'
-                        })
-                        createFile(dataTable)
-                    }).catch(error => {
-                        dataTable.push({
-                            name: element.name,
-                            numero: el,
-                            email: element.email,
-                            enviou: 'Não'
-                        })
-                        createFile(dataTable)
-                        array.push(element)
-                        console.log(error)
-                    });
-                })
-            } else {
-               
-                let numberUser = "55" + element.number;
-                numberUser = numberUser.replace(/\D+/g, '');
-                if(numberUser.length<=12){
-                    numberUser = numberUser.slice(0, 2)+ '67' + numberUser.slice(5);
-                }
-                numberUser = numberUser.replace('@c.us', '');
-                numberUser = `${numberUser}@c.us`
-                if (numberUser.length === 18 && numberUser[4] === '9') {
-                    numberUser = numberUser.slice(0, 4) + numberUser.slice(5);
-                }
-                const message = data.message || `Olá, tudo bem?`;
-                messageContent = message;
-                ws.sendMessage(numberUser, message).then(e => {
-                    if (file != null && file != undefined) {
-                        sendMessageMedia(numberUser, file, 'imagem')
-                    }
-                    numbersArray.push(numberUser)
-                    dataTable.push({
-                        name: element.name,
-                        numero: element.number,
-                        email: element.email,
-                        enviou: 'Sim'
-                    })
-                    createFile(dataTable)
-                }).catch(error => {
-                    dataTable.push({
-                        name: element.name,
-                        numero: element.number,
-                        email: element.email,
-                        enviou: 'Não'
-                    })
-                    createFile(dataTable)
-                    array.push(element)
-                    console.log(error)
-                });
+    async.timesSeries(numberSend.length, (i, next) => {
+        const element = numberSend[i];
+        if (element=== element.number) {
+            return res.status(400).json({ message: 'O número em questão não existe' });
+        }
+        let numberUser;
+        // if (typeof element.number == 'object') {
+        //     element.number.forEach(el => {
+        //         numberUser = numberUser.replace(/\D+/g, '').replace(/[^a-zA-Z0-9]/g, '');
+        //         if (numberUser.length <= 10) {
+        //             numberUser = "67" + element.number;
+        //         }
+        //         numberUser = "55" + el
+        //         numberUser = numberUser.replace('@c.us', '');
+        //         if (numberUser.length === 18 && numberUser[4] === '9') {
+        //             numberUser = numberUser.slice(0, 4) + numberUser.slice(5);
+        //         }
+        //         if (phoneNumbers.includes(numberUser) || numberUser[4] === '3') {
+        //             return;
+        //         }
+        //         phoneNumbers.push(numberUser);
+        //         numberUser = `${numberUser}@c.us`
+        //         const message = `Olá ${element.name}, tudo bem?` + data.message || `Olá, tudo bem?`;
+        //         messageContent = message;
+        //         ws.sendMessage(numberUser, message).then(e => {
+        //             if (files != null && files != undefined && files.length != 0) {
+        //                 sendMessageMedia(numberUser, files)
+        //             }
+        //             numbersArray.push(numberUser)
+        //             dataTable.push({
+        //                 name: element.name,
+        //                 numero: el,
+        //                 email: element.email,
+        //                 enviou: 'Sim'
+        //             })
+        //             createFile(dataTable)
+        //         }).catch(error => {
+        //             dataTable.push({
+        //                 name: element.name,
+        //                 numero: el,
+        //                 email: element.email,
+        //                 enviou: 'Não'
+        //             })
+        //             createFile(dataTable)
+        //         });
+        //     })
+        // } else {
+        numberUser = element.number.replace(/\s/g, '').replace(/[^a-zA-Z0-9]/g, '');
+        if (numberUser.length < 10) {
+            numberUser = "67" + numberUser;
+        }
+        numberUser = numberUser.replace('@c.us', '');
+        if (numberUser.length === 11 && numberUser[2] === '9') {
+            numberUser = numberUser.slice(0, 2) + numberUser.slice(3);
+        }
 
-            }
-        }, 10 * 1000 );
-    })
+        let shouldSend = true;
+        if (phoneNumbers.includes(numberUser) || numberUser[2] === '3') {
+            shouldSend = false;
+        }
+        if (shouldSend) {
+            phoneNumbers.push(numberUser);
+            numberUser = `55${numberUser}@c.us`
+            const message = data.message ;
+            messageContent = message;
+            ws.sendMessage(numberUser, message).then(e => {
+                if (files != null && files != undefined) {
+                    sendMessageMedia(numberUser, files, 'imagem')
+                }
+                numbersArray.push(numberUser)
+                dataTable.push({
+                    name: element.name,
+                    numero: element.number,
+                    email: element.email,
+                    enviou: 'Sim'
+                })
+                createFile(dataTable)
+            }).catch(error => {
+                dataTable.push({
+                    name: element.name,
+                    numero: element.number,
+                    email: element.email,
+                    enviou: 'Não'
+                })
+                createFile(dataTable)
+                console.log(error)
+            });
+        } else {
+            return next();
+        }
+
+
+        // }
+        setTimeout(next, 15000);
+    }).then(() => {
+        isSending = false;
+    });
     res.send({ msg: 'done', data: array, numbersArray, messageContent, type: 'whatsApp' })
 })
+
 
 
 function createFile(data) {

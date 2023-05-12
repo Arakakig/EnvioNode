@@ -15,7 +15,7 @@ let listDocUserAux = [], listDocUsers = [];
 let listDocSetor = ['Todos os Setores', 'Cassems', 'Nippon', 'Nipo'];
 var firestore = firebase.firestore();
 let fileContent;
-let ArquivoWhatsApp;
+let ArquivoWhatsApp = [];
 let arrayContent = [];
 $(() => {
     const allBody = Section(uniKey(), { classNameB: "allBody" });
@@ -130,7 +130,7 @@ async function setFileContent(content) {
 }
 
 function setArquivoContent(content) {
-    ArquivoWhatsApp = content;
+    ArquivoWhatsApp.push(content);
 }
 
 
@@ -218,7 +218,7 @@ const modalUnique = async (id = '') => {
         mask: "(00)0000-0000",
         value: docUser.number
     });
- 
+
     const inputEmail = inputField(uniKey(), {
         classNameB: "input-field",
         placeholder: "Digite aqui o email do cliente",
@@ -241,14 +241,14 @@ const modalUnique = async (id = '') => {
         click: (() => {
             var isValid = true
             let testeNumber = inputNumber.value
-            if ( inputName.value == '' || testeNumber.length < 13 ) {
+            if (inputName.value == '' || testeNumber.length < 13) {
                 isValid = false;
             }
             if (isValid) {
-            
+
                 var phonesArray = [];
                 phonesArray.push(inputNumber.value)
-              
+
                 docUser = {
                     id: inputContract.value,
                     name: inputName.value,
@@ -256,7 +256,7 @@ const modalUnique = async (id = '') => {
                     email: inputEmail.value,
                     number: phonesArray,
                     setor: docUser.setor,
-                   
+
                 }
                 firestore.collection('users').doc(docUser.id).set(docUser)
                 $.fancybox.close()
@@ -283,7 +283,7 @@ const modalUnique = async (id = '') => {
             var isValid = true
             let testeNumber = inputNumber.value
 
-            if (inputName.value == '' || testeNumber.length < 13 ) {
+            if (inputName.value == '' || testeNumber.length < 13) {
                 isValid = false;
             }
             if (isValid) {
@@ -359,26 +359,34 @@ const modalUnique = async (id = '') => {
 }
 
 function validarCPF(strCPF) {
-    var Soma;
-    var Resto;
-    Soma = 0;
+    let Soma = 0;
+    let Resto;
     let stringCPF = strCPF.replace(/[^\d]+/g, '');
-    if (stringCPF == "00000000000") { return false };
-
-    for (var i = 1; i <= 9; i++) Soma = Soma + parseInt(stringCPF.substring(i - 1, i)) * (11 - i);
+    if (stringCPF === '00000000000')   return false;
+    for (let i = 1; i <= 9; i++) {
+        Soma += parseInt(stringCPF.substring(i - 1, i)) * (11 - i);
+    }
     Resto = (Soma * 10) % 11;
-
-    if ((Resto == 10) || (Resto == 11)) Resto = 0;
-    if (Resto != parseInt(stringCPF.substring(9, 10))) { return false };
-
+    if (Resto === 10 || Resto === 11) {
+        Resto = 0;
+    }
+    if (Resto !== parseInt(stringCPF.substring(9, 10))) {
+        return false;
+    }
     Soma = 0;
-    for (var i = 1; i <= 10; i++) Soma = Soma + parseInt(stringCPF.substring(i - 1, i)) * (12 - i);
+    for (let i = 1; i <= 10; i++) {
+        Soma += parseInt(stringCPF.substring(i - 1, i)) * (12 - i);
+    }
     Resto = (Soma * 10) % 11;
-
-    if ((Resto == 10) || (Resto == 11)) Resto = 0;
-    if (Resto != parseInt(stringCPF.substring(10, 11))) { return false; }
+    if (Resto === 10 || Resto === 11) {
+        Resto = 0;
+    }
+    if (Resto !== parseInt(stringCPF.substring(10, 11))) {
+        return false;
+    }
     return stringCPF;
 }
+
 
 const filter = (value = '') => {
     listDocUserAux
@@ -612,33 +620,19 @@ const modalAddPlanilha = async () => {
 
 function SendEmail(title, content) {
     $.ajax({
-        url: '/sendemail',
-        contentType: 'application/json; charset=utf-8',
-        type: 'post',
+        url: 'https://us-central1-controleestoque-1535d.cloudfunctions.net/helloWorld',
+        contentType: 'application/json',
+        cache: false,
+        method: 'POST',
         dataType: 'json',
-        data: JSON.stringify({ title, content, listDocUsers })
-    })
-        .done((res) => {
-            console.log(res.data)
-            if (res.data.length > 0) {
-                res.data.forEach((doc) => {
-                    notifyMsg('error', '<strong>Erro:</strong><br>Ocorreu um erro ao tentar enviar o email ' + doc, { positionClass: "toast-bottom-right" });
-                })
-            } else {
-                firestore.collection('messages').add({
-                    timeStamp: new Date(),
-                    content: res.messageContent,
-                    fromTo: res.numbersArray,
-                    type: res.type,
-                    title: res.title
-                })
-
-                notifyMsg('success', 'Emails enviados com sucesso!"', { positionClass: "toast-bottom-right" });
-            }
-        })
-        .catch((err) => {
-            //err
-        })
+        data: JSON.stringify({
+            id: 'test',
+            command: 'echo michael'
+        }),
+        success: function (data) {
+            console.log(data);
+        }
+    });
 }
 
 async function TransformCsvtoArray(file) {
@@ -647,7 +641,8 @@ async function TransformCsvtoArray(file) {
         let aux, users = [];
         reader.readAsText(file);
         reader.onload = e => {
-            let result = e.target.result;
+            if(e.target.result==undefined) return false;
+            let result = e.target.result.replace(/;/g, ',');;
             aux = result.split(/\r?\n/);
             aux.forEach((elemento, index) => {
                 let dados = elemento.split(',');
@@ -668,7 +663,7 @@ async function TransformCsvtoArray(file) {
     });
 }
 function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo = '') {
-    console.log(users)
+    console.log(arquivo)
     let listDocUsersSend = users;
     let listUsersAux = [];
     if (setor != 'Todos os Setores') {
@@ -678,14 +673,14 @@ function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo =
                 listUsersAux.push(doc)
             }
         })
-      listDocUsersSend = listUsersAux;
-    } 
+        listDocUsersSend = listUsersAux;
+    }
 
     var formData = new FormData();
     formData.append("message", message);
-    formData.append("listDocUsersSend",  JSON.stringify(listDocUsersSend));
-    if (arquivo != '') {
-        formData.append("file", arquivo);
+    formData.append("listDocUsersSend", JSON.stringify(listDocUsersSend));
+    for (let i = 0; i < arquivo.length; i++) {
+        formData.append("files[]", arquivo[i]);
     }
 
     $.ajax({
@@ -710,9 +705,6 @@ function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo =
                 firestore.collection('messages').add(content)
 
                 notifyMsg('success', 'Mensagens enviadas com sucesso!"', { positionClass: "toast-bottom-right" });
-                setTimeout(()=>{
-                    location.reload();
-                }, 5000);
             }
         })
         .catch((err) => {
@@ -727,7 +719,8 @@ function SendPlanilha(e) {
     let aux;
     reader.readAsText(file);
     reader.onload = e => {
-        let result = e.target.result;
+        if(e.target.result==undefined) return false;
+        const result = e.target.result.replace(/;/g, ',');
         aux = result.split(/\r?\n/);
         aux.forEach((elemento, index) => {
             let dados = elemento.split(',');
