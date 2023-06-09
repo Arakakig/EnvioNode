@@ -170,7 +170,9 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
             return res.status(400).json({ message: 'O número em questão não existe' });
         }
         let numberUser;
-      
+        if(element.number == ''){
+            return res.status(400).json({ message: 'O número em questão não existe' });
+        } 
         numberUser = element.number.replace(/\s/g, '').replace(/[^a-zA-Z0-9]/g, '');
         if (numberUser.length < 10) {
             numberUser = "67" + numberUser;
@@ -209,6 +211,7 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                     email: element.email,
                     enviou: 'Não'
                 })
+    		console.log(element.name, element.number)
                 createFile(dataTable)
                 console.log(error)
             });
@@ -233,7 +236,6 @@ app.post('/cancelwhats', (req, res) => {
 
 
 function createFile(data) {
-    console.log(data)
     const csvDataResult = data.map(object => `${object.name},${object.numero},${object.email},${object.enviou} \n`).join('');
     // Escrevendo a string no arquivo
     fs.writeFile('Enviados.csv', csvDataResult, (err) => {

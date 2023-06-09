@@ -11,6 +11,24 @@
     font-size: 16px;
     font-weight: 600;
 }
+.allBody{
+    display: flex;
+}
+.allBodyConstruct {
+    margin-left: 5px;
+    border: 1.5px solid black;
+    box-shadow: 5px 10px;
+    border-radius: 10px;
+    width: 33%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.allBodyConstruct .button-7 {
+    text-align: left;
+}
 .butonsFilter{
     display: flex;
     text-align: right;

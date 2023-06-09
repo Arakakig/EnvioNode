@@ -73,7 +73,7 @@ $(() => {
 
     const cancelWhats = Button(uniKey(), {
         classNameB: "button-7 button-add",
-        content:  [Icon('ban'), ' Cancelar o envio de WhatsApp'],
+        content: [Icon('ban'), ' Cancelar o envio de WhatsApp'],
         click: (() => {
             CancelWhats();
         })
@@ -87,8 +87,6 @@ $(() => {
             modalAddPlanilha()
         })
     })
-
-
 
 
 
@@ -120,12 +118,146 @@ function setArquivoContent(content) {
 
 const attConstruct = () => {
 
-    const allBodyConstruct = Section(uniKey(), { classNameB: "allBodyConstruct" });
+    const cobrancaSection = Section(uniKey(), { classNameB: "allBodyConstruct" });
 
+
+    // Exemplo de uso
+
+
+    const cobranca2a6 = Button(uniKey(), {
+        classNameB: "button-7",
+        content: ['Cobrança 2 a 6 meses'],
+        click: (() => {
+            var textoParaCopiar = `Olá {nome_cliente} tudo bem?
+
+Aqui é o Guilherme da Pax Nippon. Passando para informar que a sua mensalidade já venceu. 
+            
+Você pode estar realizando o pagamento via Pix: 
+            
+Nippon 
+Tipo: CNPJ
+Pix: 41.220.924/0001-80
+            
+Qualquer dúvida eu estou a disposição 😊`;
+            navigator.clipboard.writeText(textoParaCopiar).then(r => {
+                notifyMsg('success', 'Texto Copiado com sucesso.', { positionClass: "toast-bottom-right" });
+            })
+        })
+    })
+
+    const cobranca7a12 = Button(uniKey(), {
+        classNameB: "button-7",
+        content: ['Cobrança 7 a 12 meses'],
+        click: (() => {
+            var textoParaCopiar = `Olá {nome_cliente}, tudo bem?
+            
+ Aqui é o Guilherme da Pax Nippon. 
+
+ Estamos com algumas pendências, se você quiser, posso ver o que eu consigo para fazermos um acordo e regulariza-las. 
+          
+ Caso você não seja a pessoa, ou já tenha feito um acordo, por favor desconsidere essa mensagem`;
+            navigator.clipboard.writeText(textoParaCopiar).then(r => {
+                notifyMsg('success', 'Texto Copiado com sucesso.', { positionClass: "toast-bottom-right" });
+            })
+
+        })
+    })
+
+    const cobranca12a60 = Button(uniKey(), {
+        classNameB: "button-7",
+        content: ['Cobrança 12 a 60 meses'],
+        click: (() => {
+            var textoParaCopiar = `Olá {nome_cliente}, tudo bem?
+
+Aqui é o Guilherme da Pax Nippon. 
+
+Estamos com algumas pendências, se você quiser, posso ver o que eu consigo para fazermos um acordo e regulariza-las. 
+          
+Caso você não seja a pessoa, ou já tenha feito um acordo, por favor desconsidere essa mensagem`;
+            navigator.clipboard.writeText(textoParaCopiar).then(r => {
+                notifyMsg('success', 'Texto Copiado com sucesso.', { positionClass: "toast-bottom-right" });
+            })
+        })
+    })
+
+    const cobrancaindevida = Button(uniKey(), {
+        classNameB: "button-7",
+        content: ['Cobrança Indevida'],
+        click: (() => {
+            var textoParaCopiar = `Está certo mesmo. 
+Eu peço perdão. Teve um erro aqui.
+
+Desculpa o incomodo, tenha um ótimo dia!`;
+            navigator.clipboard.writeText(textoParaCopiar).then(r => {
+                notifyMsg('success', 'Texto Copiado com sucesso.', { positionClass: "toast-bottom-right" });
+            })
+        })
+    })
+
+    const cobrancapessoaerrada = Button(uniKey(), {
+        classNameB: "button-7",
+        content: ['Pessoa Errada'],
+        click: (() => {
+            var textoParaCopiar = `Tudo bem, vou retirar o seu número aqui do nosso sistema.
+
+Tenha um ótimo dia! Peço perdão pelo inconveniente.`;
+            navigator.clipboard.writeText(textoParaCopiar).then(r => {
+                notifyMsg('success', 'Texto Copiado com sucesso.', { positionClass: "toast-bottom-right" });
+            })
+        })
+    })
+
+
+
+    $(cobrancaSection).html([
+        nText({ text: "Botões de Cobrança", classNameB: "title-modal center" }),
+        space(),
+        cobranca2a6,
+        space(),
+        cobranca7a12,
+        space(),
+        cobranca12a60,
+        space(),
+        cobrancaindevida,
+        space(),
+        cobrancapessoaerrada
+    ]);
+
+
+    const aniversarioSection = Section(uniKey(), { classNameB: "allBodyConstruct" });
+    const aniversario = Button(uniKey(), {
+        classNameB: "button-7",
+        content: ['Mensagem de Aniversário'],
+        click: (() => {
+            var textoParaCopiar = `Olá, {nome_cliente}!
+            
+Hoje é um dia especial, pois é o seu aniversário! 🎉🎂 Queremos aproveitar essa ocasião para desejar a você os mais sinceros votos de felicidade, saúde e sucesso em todos os aspectos da sua vida.
+            
+Agradecemos por fazer parte da nossa família de clientes e por confiar em nossos serviços. É um prazer atendê-lo(a) e poder contribuir para o seu bem-estar.
+            
+Que este novo ano de vida seja repleto de momentos incríveis, conquistas e realizações. Que você encontre inspiração, amor e paz em cada passo que der.
+            
+Estamos sempre à disposição para auxiliá-lo(a) no que precisar. Desejamos um feliz aniversário e um ano brilhante!
+            
+Com os melhores cumprimentos,
+Equipe da Pax Nippon`;
+
+            navigator.clipboard.writeText(textoParaCopiar).then(r => {
+                notifyMsg('success', 'Texto Copiado com sucesso.', { positionClass: "toast-bottom-right" });
+            })
+        })
+    })
+    
+    $(aniversarioSection).html([
+        nText({ text: "Botão de Aniversário", classNameB: "title-modal center" }),
+        space(),
+        aniversario
+    ]);
 
 
     $('.allBody').html([
-        allBodyConstruct
+        cobrancaSection,
+        aniversarioSection
     ]);
 
 }
@@ -467,7 +599,9 @@ const modalWhatsApp = () => {
 const modalAddPlanilha = async () => {
     $("#modal-create-unique-content").html("")
     $.fancybox.open({ src: "#modal-create-unique", touch: false, keyboard: false });
-    let testeAux = ['Enviar para Mensagem para a Lista'];
+    let testeAux = ['Enviar para Mensagem para a Lista', 'teste'];   
+    let completName = true;
+    let teste1Aux = ['Nome Completo', 'Primeiro Nome'];   
     let typeSend = 'Adicionar Clientes';
     const divPlanilha = Section(uniKey(), { classNameB: "divPlanilha" });
 
@@ -484,8 +618,24 @@ const modalAddPlanilha = async () => {
 
     const SendArquivoWhatsApp = $("<input type='file' accept='image/png, image/jpeg' class='inputArquivo inputPlanilha button-7 ' onchange='setArquivoContent(event.target.files[0])';/>");
 
+
+    const divNameContent = inputSelect(uniKey(), {
+        classNameB: "input-field",
+        options: teste1Aux,
+        onchange: (e) => {
+            if(completName==false){
+                completName = true;
+            }
+            else{
+                completName = true;
+            }
+      
+        },
+    });
+
+
     $(inputDivContent).html([
-        nText({ text: "Conteúdo do Mensagem", classNameB: "subtitle-modal" }),
+        nText({ text: "Conteúdo da Mensagem", classNameB: "subtitle-modal" }),
         inputMessageContent,
         space(),
         SendArquivoWhatsApp,
@@ -496,7 +646,7 @@ const modalAddPlanilha = async () => {
         classNameB: "input-field",
         options: testeAux,
         onchange: (e) => {
-
+            console.log(inputSelectItem.value)
         },
     });
 
@@ -505,7 +655,7 @@ const modalAddPlanilha = async () => {
         classNameB: "button-7",
         content: [Icon('Check'), ' Concluir'],
         click: (() => {
-            SendWhatsApp(inputMessageContent.value, 'Todos os Setores', arrayContent, ArquivoWhatsApp);
+            SendWhatsApp(inputMessageContent.value, 'Todos os Setores', arrayContent, ArquivoWhatsApp, completName);
             $.fancybox.close()
         })
     })
@@ -533,6 +683,10 @@ const modalAddPlanilha = async () => {
         nText({ text: "Deseja Cadastrar Clientes ou Enviar a Mensagem para Lista?", classNameB: "subtitle-modal" }),
         space(),
         inputSelectItem,
+        space(20),
+        nText({ text: "Nome Completo?", classNameB: "subtitle-modal" }),
+        space(),
+        divNameContent,
         space(20),
         inputDivContent,
         buttonsFinal
@@ -587,7 +741,7 @@ async function TransformCsvtoArray(file) {
         };
     });
 }
-function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo = '') {
+function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo = '', nameComplet=true) {
     console.log(arquivo)
     let listDocUsersSend = users;
     let listUsersAux = [];
@@ -604,6 +758,7 @@ function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo =
     var formData = new FormData();
     formData.append("message", message);
     formData.append("listDocUsersSend", JSON.stringify(listDocUsersSend));
+    formData.append("nameComplet", nameComplet);
     for (let i = 0; i < arquivo.length; i++) {
         formData.append("files[]", arquivo[i]);
     }
@@ -670,7 +825,7 @@ function SendPlanilha(e) {
                 setor: dados[3] != undefined ? dados[3] : '',
                 id: uniKey()
             }
-            firestore.collection('users').doc(data.id).set(data);
+            // firestore.collection('users').doc(data.id).set(data);
         })
     };
 
