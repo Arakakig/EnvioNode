@@ -12,7 +12,10 @@
     font-weight: 600;
 }
 .allBody{
+    height: 100vh;
     display: flex;
+    justify-content: center;
+    align-items: center;
 }
 .allBodyConstruct {
     margin-left: 5px;
@@ -26,9 +29,7 @@
     flex-direction: column;
 }
 
-.allBodyConstruct .button-7 {
-    text-align: left;
-}
+
 .butonsFilter{
     display: flex;
     text-align: right;
@@ -103,8 +104,9 @@
 
 
 .inputPlanilha{
+    text-align: center;
     max-width: 170px;
-    background-color: var(--background-medium);
+    background-color: var(--main-color);
 }
 .divPlanilha{
     display: flex;

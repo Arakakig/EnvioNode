@@ -47,11 +47,7 @@ let sessionData;
  */
 const withSession = async () => {
     sessionData = require(SESSION_FILE_PATH);
-    ws = new Client({
-        authStrategy: new LegacySessionAuth({
-            session: sessionData
-        })
-    });
+    ws = new Client({ authStrategy: new LocalAuth({ dataPath: "sessions", }), webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html', } });
     ws.on('ready', () => console.log('Cliente está pronto!'));
     ws.on('auth_failure', () => {
         console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **');
@@ -68,10 +64,9 @@ const withOutSession = async () => {
     ws = new Client({
         puppeteer: {
             executablePath: '/usr/bin/brave-browser-stable',
+            args: ["--no-sandbox", "--disable-dev-shm-usage"],
         },
-        authStrategy: new LocalAuth({
-            clientId: "client-one"
-        }),
+        authStrategy: new LocalAuth({ dataPath: "sessions", }), webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html', },
         puppeteer: {
             headless: false,
         },
