@@ -141,7 +141,12 @@ function toTitleCase(str) {
 }
 
 let isSending = false;
-let continueRoading= true;
+let continueRoading = true;
+
+function numberAleatorio(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 
 app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
     continueRoading = true;
@@ -159,15 +164,15 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
     let numberSend = JSON.parse(data.listDocUsersSend);
     let dataTable = [];
     async.timesSeries(numberSend.length, (i, next) => {
-        if(!continueRoading) return true;
+        if (!continueRoading) return true;
         const element = numberSend[i];
-        if (element=== element.number) {
+        if (element === element.number) {
             return res.status(400).json({ message: 'O número em questão não existe' });
         }
         let numberUser;
-        if(element.number == ''){
+        if (element.number == '') {
             return res.status(400).json({ message: 'O número em questão não existe' });
-        } 
+        }
         numberUser = element.number.replace(/\s/g, '').replace(/[^a-zA-Z0-9]/g, '');
         if (numberUser.length < 10) {
             numberUser = "67" + numberUser;
@@ -206,7 +211,7 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                     email: element.email,
                     enviou: 'Não'
                 })
-    		console.log(element.name, element.number)
+                console.log(element.name, element.number)
                 createFile(dataTable)
                 console.log(error)
             });
@@ -216,12 +221,42 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
 
 
         // }
-        setTimeout(next, 15000);
+        setTimeout(next, numberAleatorio(60000, 120000));
     }).then(() => {
         isSending = false;
     });
     res.send({ msg: 'done', data: array, numbersArray, messageContent, type: 'whatsApp' })
 })
+
+function gerarStringAleatoria(tamanho) {
+    const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ,.;?/!@#$%¨&*()_+-=<>{}[]';
+    let resultado = '';
+    for (let i = 0; i < tamanho; i++) {
+        resultado += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+    }
+    return resultado;
+}
+
+app.post('/treinaNumber', async (req, res) => {
+    const numberUser = `556781145831@c.us`;
+    const intervaloDeEnvio = numberAleatorio(30000, 180000); // Intervalo de envio em milissegundos
+    
+    async function enviarMensagens() {
+        const comprimentoAleatorio = numberAleatorio(30, 60);
+        const stringAleatoria = gerarStringAleatoria(comprimentoAleatorio); // Gerando uma string aleatória de comprimento 10
+        try {
+            await ws.sendMessage(numberUser, stringAleatoria);
+            console.log(`String aleatória "${stringAleatoria}" enviada para ${numberUser}`);
+        } catch (error) {
+            console.error(`Erro ao enviar string aleatória para ${numberUser}:`, error);
+        } finally {
+            setTimeout(enviarMensagens, intervaloDeEnvio);
+        }
+    }
+    
+    enviarMensagens(); // Inicia o envio de mensagens
+});
+
 
 app.post('/cancelwhats', (req, res) => {
     continueRoading = false;

@@ -1,3005 +1,5438 @@
-/*
-
- Version: 1.8.1
-  Author: Ken Wheeler
- Website: http://kenwheeler.github.io
-    Docs: http://kenwheeler.github.io/slick
-    Repo: http://github.com/kenwheeler/slick
-  Issues: http://github.com/kenwheeler/slick/issues
-
+/*!
+ * Font Awesome Free 5.8.1 by @fontawesome - https://fontawesome.com
+ * License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
  */
-/* global window, document, define, jQuery, setInterval, clearInterval */
-;(function(factory) {
-    'use strict';
-    if (typeof define === 'function' && define.amd) {
-        define(['jquery'], factory);
-    } else if (typeof exports !== 'undefined') {
-        module.exports = factory(require('jquery'));
-    } else {
-        factory(jQuery);
-    }
-
-}(function($) {
-    'use strict';
-    var Slick = window.Slick || {};
-
-    Slick = (function() {
-
-        var instanceUid = 0;
-
-        function Slick(element, settings) {
-
-            var _ = this, dataSettings;
-
-            _.defaults = {
-                accessibility: true,
-                adaptiveHeight: false,
-                appendArrows: $(element),
-                appendDots: $(element),
-                arrows: true,
-                asNavFor: null,
-                prevArrow: '<button class="slick-prev fa fa-arrow-left" aria-label="Anterior" type="button"></button>',
-                nextArrow: '<button class="slick-next fa fa-arrow-right" aria-label="Próximo" type="button"></button>',
-                autoplay: false,
-                autoplaySpeed: 3000,
-                centerMode: false,
-                centerPadding: '50px',
-                cssEase: 'ease',
-                customPaging: function(slider, i) {
-                    return $('<button type="button" />').text(i + 1);
-                },
-                dots: false,
-                dotsClass: 'slick-dots',
-                draggable: true,
-                easing: 'linear',
-                edgeFriction: 0.35,
-                fade: false,
-                focusOnSelect: false,
-                focusOnChange: false,
-                infinite: true,
-                initialSlide: 0,
-                lazyLoad: 'ondemand',
-                mobileFirst: false,
-                pauseOnHover: true,
-                pauseOnFocus: true,
-                pauseOnDotsHover: false,
-                respondTo: 'window',
-                responsive: null,
-                rows: 1,
-                rtl: false,
-                slide: '',
-                slidesPerRow: 1,
-                slidesToShow: 1,
-                slidesToScroll: 1,
-                speed: 500,
-                swipe: true,
-                swipeToSlide: false,
-                touchMove: true,
-                touchThreshold: 5,
-                useCSS: true,
-                useTransform: true,
-                variableWidth: false,
-                vertical: false,
-                verticalSwiping: false,
-                waitForAnimate: true,
-                zIndex: 1000
-            };
-
-            _.initials = {
-                animating: false,
-                dragging: false,
-                autoPlayTimer: null,
-                currentDirection: 0,
-                currentLeft: null,
-                currentSlide: 0,
-                direction: 1,
-                $dots: null,
-                listWidth: null,
-                listHeight: null,
-                loadIndex: 0,
-                $nextArrow: null,
-                $prevArrow: null,
-                scrolling: false,
-                slideCount: null,
-                slideWidth: null,
-                $slideTrack: null,
-                $slides: null,
-                sliding: false,
-                slideOffset: 0,
-                swipeLeft: null,
-                swiping: false,
-                $list: null,
-                touchObject: {},
-                transformsEnabled: false,
-                unslicked: false
-            };
-
-            $.extend(_, _.initials);
-
-            _.activeBreakpoint = null;
-            _.animType = null;
-            _.animProp = null;
-            _.breakpoints = [];
-            _.breakpointSettings = [];
-            _.cssTransitions = false;
-            _.focussed = false;
-            _.interrupted = false;
-            _.hidden = 'hidden';
-            _.paused = true;
-            _.positionProp = null;
-            _.respondTo = null;
-            _.rowCount = 1;
-            _.shouldClick = true;
-            _.$slider = $(element);
-            _.$slidesCache = null;
-            _.transformType = null;
-            _.transitionType = null;
-            _.visibilityChange = 'visibilitychange';
-            _.windowWidth = 0;
-            _.windowTimer = null;
-
-            dataSettings = $(element).data('slick') || {};
-
-            _.options = $.extend({}, _.defaults, settings, dataSettings);
-
-            _.currentSlide = _.options.initialSlide;
-
-            _.originalSettings = _.options;
-
-            if (typeof document.mozHidden !== 'undefined') {
-                _.hidden = 'mozHidden';
-                _.visibilityChange = 'mozvisibilitychange';
-            } else if (typeof document.webkitHidden !== 'undefined') {
-                _.hidden = 'webkitHidden';
-                _.visibilityChange = 'webkitvisibilitychange';
-            }
-
-            _.autoPlay = $.proxy(_.autoPlay, _);
-            _.autoPlayClear = $.proxy(_.autoPlayClear, _);
-            _.autoPlayIterator = $.proxy(_.autoPlayIterator, _);
-            _.changeSlide = $.proxy(_.changeSlide, _);
-            _.clickHandler = $.proxy(_.clickHandler, _);
-            _.selectHandler = $.proxy(_.selectHandler, _);
-            _.setPosition = $.proxy(_.setPosition, _);
-            _.swipeHandler = $.proxy(_.swipeHandler, _);
-            _.dragHandler = $.proxy(_.dragHandler, _);
-            _.keyHandler = $.proxy(_.keyHandler, _);
-
-            _.instanceUid = instanceUid++;
-
-            // A simple way to check for HTML strings
-            // Strict HTML recognition (must start with <)
-            // Extracted from jQuery v1.11 source
-            _.htmlExpr = /^(?:\s*(<[\w\W]+>)[^>]*)$/;
-
-
-            _.registerBreakpoints();
-            _.init(true);
-
-        }
-
-        return Slick;
-
-    }());
-
-    Slick.prototype.activateADA = function() {
-        var _ = this;
-
-        _.$slideTrack.find('.slick-active').attr({
-            'aria-hidden': 'false'
-        }).find('a, input, button, select').attr({
-            'tabindex': '0'
-        });
-
-    };
-
-    Slick.prototype.addSlide = Slick.prototype.slickAdd = function(markup, index, addBefore) {
-
-        var _ = this;
-
-        if (typeof(index) === 'boolean') {
-            addBefore = index;
-            index = null;
-        } else if (index < 0 || (index >= _.slideCount)) {
-            return false;
-        }
-
-        _.unload();
-
-        if (typeof(index) === 'number') {
-            if (index === 0 && _.$slides.length === 0) {
-                $(markup).appendTo(_.$slideTrack);
-            } else if (addBefore) {
-                $(markup).insertBefore(_.$slides.eq(index));
-            } else {
-                $(markup).insertAfter(_.$slides.eq(index));
-            }
-        } else {
-            if (addBefore === true) {
-                $(markup).prependTo(_.$slideTrack);
-            } else {
-                $(markup).appendTo(_.$slideTrack);
-            }
-        }
-
-        _.$slides = _.$slideTrack.children(this.options.slide);
-
-        _.$slideTrack.children(this.options.slide).detach();
-
-        _.$slideTrack.append(_.$slides);
-
-        _.$slides.each(function(index, element) {
-            $(element).attr('data-slick-index', index);
-        });
-
-        _.$slidesCache = _.$slides;
-
-        _.reinit();
-
-    };
-
-    Slick.prototype.animateHeight = function() {
-        var _ = this;
-        if (_.options.slidesToShow === 1 && _.options.adaptiveHeight === true && _.options.vertical === false) {
-            var targetHeight = _.$slides.eq(_.currentSlide).outerHeight(true);
-            _.$list.animate({
-                height: targetHeight
-            }, _.options.speed);
-        }
-    };
-
-    Slick.prototype.animateSlide = function(targetLeft, callback) {
-
-        var animProps = {},
-            _ = this;
-
-        _.animateHeight();
-
-        if (_.options.rtl === true && _.options.vertical === false) {
-            targetLeft = -targetLeft;
-        }
-        if (_.transformsEnabled === false) {
-            if (_.options.vertical === false) {
-                _.$slideTrack.animate({
-                    left: targetLeft
-                }, _.options.speed, _.options.easing, callback);
-            } else {
-                _.$slideTrack.animate({
-                    top: targetLeft
-                }, _.options.speed, _.options.easing, callback);
-            }
-
-        } else {
-
-            if (_.cssTransitions === false) {
-                if (_.options.rtl === true) {
-                    _.currentLeft = -(_.currentLeft);
-                }
-                $({
-                    animStart: _.currentLeft
-                }).animate({
-                    animStart: targetLeft
-                }, {
-                    duration: _.options.speed,
-                    easing: _.options.easing,
-                    step: function(now) {
-                        now = Math.ceil(now);
-                        if (_.options.vertical === false) {
-                            animProps[_.animType] = 'translate(' +
-                                now + 'px, 0px)';
-                            _.$slideTrack.css(animProps);
-                        } else {
-                            animProps[_.animType] = 'translate(0px,' +
-                                now + 'px)';
-                            _.$slideTrack.css(animProps);
-                        }
-                    },
-                    complete: function() {
-                        if (callback) {
-                            callback.call();
-                        }
-                    }
-                });
-
-            } else {
-
-                _.applyTransition();
-                targetLeft = Math.ceil(targetLeft);
-
-                if (_.options.vertical === false) {
-                    animProps[_.animType] = 'translate3d(' + targetLeft + 'px, 0px, 0px)';
-                } else {
-                    animProps[_.animType] = 'translate3d(0px,' + targetLeft + 'px, 0px)';
-                }
-                _.$slideTrack.css(animProps);
-
-                if (callback) {
-                    setTimeout(function() {
+.fa,
+.fas,
+.far,
+.fal,
+.fab {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1; }
+
+.fa-lg {
+  font-size: 1.3333333333em;
+  line-height: 0.75em;
+  vertical-align: -.0667em; }
+
+.fa-xs {
+  font-size: .75em; }
+
+.fa-sm {
+  font-size: .875em; }
+
+.fa-1x {
+  font-size: 1em; }
+
+.fa-2x {
+  font-size: 2em; }
+
+.fa-3x {
+  font-size: 3em; }
+
+.fa-4x {
+  font-size: 4em; }
+
+.fa-5x {
+  font-size: 5em; }
+
+.fa-6x {
+  font-size: 6em; }
+
+.fa-7x {
+  font-size: 7em; }
+
+.fa-8x {
+  font-size: 8em; }
+
+.fa-9x {
+  font-size: 9em; }
+
+.fa-10x {
+  font-size: 10em; }
+
+.fa-fw {
+  text-align: center;
+  width: 1.25em; }
+
+.fa-ul {
+  list-style-type: none;
+  margin-left: 2.5em;
+  padding-left: 0; }
+  .fa-ul > li {
+    position: relative; }
+
+.fa-li {
+  left: -2em;
+  position: absolute;
+  text-align: center;
+  width: 2em;
+  line-height: inherit; }
+
+.fa-border {
+  border: solid 0.08em #eee;
+  border-radius: .1em;
+  padding: .2em .25em .15em; }
+
+.fa-pull-left {
+  float: left; }
+
+.fa-pull-right {
+  float: right; }
+
+.fa.fa-pull-left,
+.fas.fa-pull-left,
+.far.fa-pull-left,
+.fal.fa-pull-left,
+.fab.fa-pull-left {
+  margin-right: .3em; }
+
+.fa.fa-pull-right,
+.fas.fa-pull-right,
+.far.fa-pull-right,
+.fal.fa-pull-right,
+.fab.fa-pull-right {
+  margin-left: .3em; }
+
+.fa-spin {
+  -webkit-animation: fa-spin 2s infinite linear;
+          animation: fa-spin 2s infinite linear; }
+
+.fa-pulse {
+  -webkit-animation: fa-spin 1s infinite steps(8);
+          animation: fa-spin 1s infinite steps(8); }
+
+@-webkit-keyframes fa-spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+            transform: rotate(0deg); }
+  100% {
+    -webkit-transform: rotate(360deg);
+            transform: rotate(360deg); } }
+
+@keyframes fa-spin {
+  0% {
+    -webkit-transform: rotate(0deg);
+            transform: rotate(0deg); }
+  100% {
+    -webkit-transform: rotate(360deg);
+            transform: rotate(360deg); } }
+
+.fa-rotate-90 {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=1)";
+  -webkit-transform: rotate(90deg);
+      -ms-transform: rotate(90deg);
+          transform: rotate(90deg); }
+
+.fa-rotate-180 {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=2)";
+  -webkit-transform: rotate(180deg);
+      -ms-transform: rotate(180deg);
+          transform: rotate(180deg); }
+
+.fa-rotate-270 {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=3)";
+  -webkit-transform: rotate(270deg);
+      -ms-transform: rotate(270deg);
+          transform: rotate(270deg); }
+
+.fa-flip-horizontal {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=0, mirror=1)";
+  -webkit-transform: scale(-1, 1);
+      -ms-transform: scale(-1, 1);
+          transform: scale(-1, 1); }
+
+.fa-flip-vertical {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=2, mirror=1)";
+  -webkit-transform: scale(1, -1);
+      -ms-transform: scale(1, -1);
+          transform: scale(1, -1); }
+
+.fa-flip-both, .fa-flip-horizontal.fa-flip-vertical {
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=2, mirror=1)";
+  -webkit-transform: scale(-1, -1);
+      -ms-transform: scale(-1, -1);
+          transform: scale(-1, -1); }
+
+:root .fa-rotate-90,
+:root .fa-rotate-180,
+:root .fa-rotate-270,
+:root .fa-flip-horizontal,
+:root .fa-flip-vertical,
+:root .fa-flip-both {
+  -webkit-filter: none;
+          filter: none; }
+
+.fa-stack {
+  display: inline-block;
+  height: 2em;
+  line-height: 2em;
+  position: relative;
+  vertical-align: middle;
+  width: 2.5em; }
+
+.fa-stack-1x,
+.fa-stack-2x {
+  left: 0;
+  position: absolute;
+  text-align: center;
+  width: 100%; }
 
-                        _.disableTransition();
-
-                        callback.call();
-                    }, _.options.speed);
-                }
+.fa-stack-1x {
+  line-height: inherit; }
 
-            }
+.fa-stack-2x {
+  font-size: 2em; }
 
-        }
+.fa-inverse {
+  color: #fff; }
 
-    };
+/* Font Awesome uses the Unicode Private Use Area (PUA) to ensure screen
+readers do not read off random characters that represent icons */
+.fa-500px:before {
+  content: "\f26e"; }
 
-    Slick.prototype.getNavTarget = function() {
+.fa-accessible-icon:before {
+  content: "\f368"; }
 
-        var _ = this,
-            asNavFor = _.options.asNavFor;
+.fa-accusoft:before {
+  content: "\f369"; }
 
-        if ( asNavFor && asNavFor !== null ) {
-            asNavFor = $(asNavFor).not(_.$slider);
-        }
+.fa-acquisitions-incorporated:before {
+  content: "\f6af"; }
 
-        return asNavFor;
+.fa-ad:before {
+  content: "\f641"; }
 
-    };
+.fa-address-book:before {
+  content: "\f2b9"; }
 
-    Slick.prototype.asNavFor = function(index) {
+.fa-address-card:before {
+  content: "\f2bb"; }
 
-        var _ = this,
-            asNavFor = _.getNavTarget();
+.fa-adjust:before {
+  content: "\f042"; }
 
-        if ( asNavFor !== null && typeof asNavFor === 'object' ) {
-            asNavFor.each(function() {
-                var target = $(this).slick('getSlick');
-                if(!target.unslicked) {
-                    target.slideHandler(index, true);
-                }
-            });
-        }
+.fa-adn:before {
+  content: "\f170"; }
 
-    };
+.fa-adobe:before {
+  content: "\f778"; }
 
-    Slick.prototype.applyTransition = function(slide) {
+.fa-adversal:before {
+  content: "\f36a"; }
 
-        var _ = this,
-            transition = {};
+.fa-affiliatetheme:before {
+  content: "\f36b"; }
 
-        if (_.options.fade === false) {
-            transition[_.transitionType] = _.transformType + ' ' + _.options.speed + 'ms ' + _.options.cssEase;
-        } else {
-            transition[_.transitionType] = 'opacity ' + _.options.speed + 'ms ' + _.options.cssEase;
-        }
+.fa-air-freshener:before {
+  content: "\f5d0"; }
 
-        if (_.options.fade === false) {
-            _.$slideTrack.css(transition);
-        } else {
-            _.$slides.eq(slide).css(transition);
-        }
+.fa-airbnb:before {
+  content: "\f834"; }
 
-    };
+.fa-algolia:before {
+  content: "\f36c"; }
 
-    Slick.prototype.autoPlay = function() {
+.fa-align-center:before {
+  content: "\f037"; }
 
-        var _ = this;
+.fa-align-justify:before {
+  content: "\f039"; }
 
-        _.autoPlayClear();
+.fa-align-left:before {
+  content: "\f036"; }
 
-        if ( _.slideCount > _.options.slidesToShow ) {
-            _.autoPlayTimer = setInterval( _.autoPlayIterator, _.options.autoplaySpeed );
-        }
+.fa-align-right:before {
+  content: "\f038"; }
 
-    };
+.fa-alipay:before {
+  content: "\f642"; }
 
-    Slick.prototype.autoPlayClear = function() {
+.fa-allergies:before {
+  content: "\f461"; }
 
-        var _ = this;
+.fa-amazon:before {
+  content: "\f270"; }
 
-        if (_.autoPlayTimer) {
-            clearInterval(_.autoPlayTimer);
-        }
+.fa-amazon-pay:before {
+  content: "\f42c"; }
 
-    };
+.fa-ambulance:before {
+  content: "\f0f9"; }
 
-    Slick.prototype.autoPlayIterator = function() {
+.fa-american-sign-language-interpreting:before {
+  content: "\f2a3"; }
 
-        var _ = this,
-            slideTo = _.currentSlide + _.options.slidesToScroll;
+.fa-amilia:before {
+  content: "\f36d"; }
 
-        if ( !_.paused && !_.interrupted && !_.focussed ) {
+.fa-anchor:before {
+  content: "\f13d"; }
 
-            if ( _.options.infinite === false ) {
+.fa-android:before {
+  content: "\f17b"; }
 
-                if ( _.direction === 1 && ( _.currentSlide + 1 ) === ( _.slideCount - 1 )) {
-                    _.direction = 0;
-                }
+.fa-angellist:before {
+  content: "\f209"; }
 
-                else if ( _.direction === 0 ) {
+.fa-angle-double-down:before {
+  content: "\f103"; }
 
-                    slideTo = _.currentSlide - _.options.slidesToScroll;
+.fa-angle-double-left:before {
+  content: "\f100"; }
 
-                    if ( _.currentSlide - 1 === 0 ) {
-                        _.direction = 1;
-                    }
+.fa-angle-double-right:before {
+  content: "\f101"; }
 
-                }
+.fa-angle-double-up:before {
+  content: "\f102"; }
 
-            }
+.fa-angle-down:before {
+  content: "\f107"; }
 
-            _.slideHandler( slideTo );
+.fa-angle-left:before {
+  content: "\f104"; }
 
-        }
+.fa-angle-right:before {
+  content: "\f105"; }
 
-    };
+.fa-angle-up:before {
+  content: "\f106"; }
 
-    Slick.prototype.buildArrows = function() {
+.fa-angry:before {
+  content: "\f556"; }
 
-        var _ = this;
+.fa-angrycreative:before {
+  content: "\f36e"; }
 
-        if (_.options.arrows === true ) {
+.fa-angular:before {
+  content: "\f420"; }
 
-            _.$prevArrow = $(_.options.prevArrow).addClass('slick-arrow');
-            _.$nextArrow = $(_.options.nextArrow).addClass('slick-arrow');
+.fa-ankh:before {
+  content: "\f644"; }
 
-            if( _.slideCount > _.options.slidesToShow ) {
+.fa-app-store:before {
+  content: "\f36f"; }
 
-                _.$prevArrow.removeClass('slick-hidden').removeAttr('aria-hidden tabindex');
-                _.$nextArrow.removeClass('slick-hidden').removeAttr('aria-hidden tabindex');
+.fa-app-store-ios:before {
+  content: "\f370"; }
 
-                if (_.htmlExpr.test(_.options.prevArrow)) {
-                    _.$prevArrow.prependTo(_.options.appendArrows);
-                }
+.fa-apper:before {
+  content: "\f371"; }
 
-                if (_.htmlExpr.test(_.options.nextArrow)) {
-                    _.$nextArrow.appendTo(_.options.appendArrows);
-                }
+.fa-apple:before {
+  content: "\f179"; }
 
-                if (_.options.infinite !== true) {
-                    _.$prevArrow
-                        .addClass('slick-disabled')
-                        .attr('aria-disabled', 'true');
-                }
+.fa-apple-alt:before {
+  content: "\f5d1"; }
 
-            } else {
+.fa-apple-pay:before {
+  content: "\f415"; }
 
-                _.$prevArrow.add( _.$nextArrow )
+.fa-archive:before {
+  content: "\f187"; }
 
-                    .addClass('slick-hidden')
-                    .attr({
-                        'aria-disabled': 'true',
-                        'tabindex': '-1'
-                    });
+.fa-archway:before {
+  content: "\f557"; }
 
-            }
+.fa-arrow-alt-circle-down:before {
+  content: "\f358"; }
 
-        }
+.fa-arrow-alt-circle-left:before {
+  content: "\f359"; }
 
-    };
+.fa-arrow-alt-circle-right:before {
+  content: "\f35a"; }
 
-    Slick.prototype.buildDots = function() {
+.fa-arrow-alt-circle-up:before {
+  content: "\f35b"; }
 
-        var _ = this,
-            i, dot;
+.fa-arrow-circle-down:before {
+  content: "\f0ab"; }
 
-        if (_.options.dots === true && _.slideCount > _.options.slidesToShow) {
+.fa-arrow-circle-left:before {
+  content: "\f0a8"; }
 
-            _.$slider.addClass('slick-dotted');
+.fa-arrow-circle-right:before {
+  content: "\f0a9"; }
 
-            dot = $('<ul />').addClass(_.options.dotsClass);
+.fa-arrow-circle-up:before {
+  content: "\f0aa"; }
 
-            for (i = 0; i <= _.getDotCount(); i += 1) {
-                dot.append($('<li />').append(_.options.customPaging.call(this, _, i)));
-            }
+.fa-arrow-down:before {
+  content: "\f063"; }
 
-            _.$dots = dot.appendTo(_.options.appendDots);
+.fa-arrow-left:before {
+  content: "\f060"; }
 
-            _.$dots.find('li').first().addClass('slick-active');
+.fa-arrow-right:before {
+  content: "\f061"; }
 
-        }
+.fa-arrow-up:before {
+  content: "\f062"; }
 
-    };
+.fa-arrows-alt:before {
+  content: "\f0b2"; }
 
-    Slick.prototype.buildOut = function() {
+.fa-arrows-alt-h:before {
+  content: "\f337"; }
 
-        var _ = this;
+.fa-arrows-alt-v:before {
+  content: "\f338"; }
 
-        _.$slides =
-            _.$slider
-                .children( _.options.slide + ':not(.slick-cloned)')
-                .addClass('slick-slide');
+.fa-artstation:before {
+  content: "\f77a"; }
 
-        _.slideCount = _.$slides.length;
+.fa-assistive-listening-systems:before {
+  content: "\f2a2"; }
 
-        _.$slides.each(function(index, element) {
-            $(element)
-                .attr('data-slick-index', index)
-                .data('originalStyling', $(element).attr('style') || '');
-        });
+.fa-asterisk:before {
+  content: "\f069"; }
 
-        _.$slider.addClass('slick-slider');
+.fa-asymmetrik:before {
+  content: "\f372"; }
 
-        _.$slideTrack = (_.slideCount === 0) ?
-            $('<div class="slick-track"/>').appendTo(_.$slider) :
-            _.$slides.wrapAll('<div class="slick-track"/>').parent();
+.fa-at:before {
+  content: "\f1fa"; }
 
-        _.$list = _.$slideTrack.wrap(
-            '<div class="slick-list"/>').parent();
-        _.$slideTrack.css('opacity', 0);
+.fa-atlas:before {
+  content: "\f558"; }
 
-        if (_.options.centerMode === true || _.options.swipeToSlide === true) {
-            _.options.slidesToScroll = 1;
-        }
+.fa-atlassian:before {
+  content: "\f77b"; }
 
-        $('img[data-lazy]', _.$slider).not('[src]').addClass('slick-loading');
+.fa-atom:before {
+  content: "\f5d2"; }
 
-        _.setupInfinite();
+.fa-audible:before {
+  content: "\f373"; }
 
-        _.buildArrows();
+.fa-audio-description:before {
+  content: "\f29e"; }
 
-        _.buildDots();
+.fa-autoprefixer:before {
+  content: "\f41c"; }
 
-        _.updateDots();
+.fa-avianex:before {
+  content: "\f374"; }
 
+.fa-aviato:before {
+  content: "\f421"; }
 
-        _.setSlideClasses(typeof _.currentSlide === 'number' ? _.currentSlide : 0);
+.fa-award:before {
+  content: "\f559"; }
 
-        if (_.options.draggable === true) {
-            _.$list.addClass('draggable');
-        }
+.fa-aws:before {
+  content: "\f375"; }
 
-    };
+.fa-baby:before {
+  content: "\f77c"; }
 
-    Slick.prototype.buildRows = function() {
+.fa-baby-carriage:before {
+  content: "\f77d"; }
 
-        var _ = this, a, b, c, newSlides, numOfSlides, originalSlides,slidesPerSection;
+.fa-backspace:before {
+  content: "\f55a"; }
 
-        newSlides = document.createDocumentFragment();
-        originalSlides = _.$slider.children();
+.fa-backward:before {
+  content: "\f04a"; }
 
-        if(_.options.rows > 0) {
+.fa-bacon:before {
+  content: "\f7e5"; }
 
-            slidesPerSection = _.options.slidesPerRow * _.options.rows;
-            numOfSlides = Math.ceil(
-                originalSlides.length / slidesPerSection
-            );
+.fa-balance-scale:before {
+  content: "\f24e"; }
 
-            for(a = 0; a < numOfSlides; a++){
-                var slide = document.createElement('div');
-                for(b = 0; b < _.options.rows; b++) {
-                    var row = document.createElement('div');
-                    for(c = 0; c < _.options.slidesPerRow; c++) {
-                        var target = (a * slidesPerSection + ((b * _.options.slidesPerRow) + c));
-                        if (originalSlides.get(target)) {
-                            row.appendChild(originalSlides.get(target));
-                        }
-                    }
-                    slide.appendChild(row);
-                }
-                newSlides.appendChild(slide);
-            }
+.fa-ban:before {
+  content: "\f05e"; }
 
-            _.$slider.empty().append(newSlides);
-            _.$slider.children().children().children()
-                .css({
-                    'width':(100 / _.options.slidesPerRow) + '%',
-                    'display': 'inline-block'
-                });
+.fa-band-aid:before {
+  content: "\f462"; }
 
-        }
+.fa-bandcamp:before {
+  content: "\f2d5"; }
 
-    };
+.fa-barcode:before {
+  content: "\f02a"; }
 
-    Slick.prototype.checkResponsive = function(initial, forceUpdate) {
+.fa-bars:before {
+  content: "\f0c9"; }
 
-        var _ = this,
-            breakpoint, targetBreakpoint, respondToWidth, triggerBreakpoint = false;
-        var sliderWidth = _.$slider.width();
-        var windowWidth = window.innerWidth || $(window).width();
+.fa-baseball-ball:before {
+  content: "\f433"; }
 
-        if (_.respondTo === 'window') {
-            respondToWidth = windowWidth;
-        } else if (_.respondTo === 'slider') {
-            respondToWidth = sliderWidth;
-        } else if (_.respondTo === 'min') {
-            respondToWidth = Math.min(windowWidth, sliderWidth);
-        }
+.fa-basketball-ball:before {
+  content: "\f434"; }
 
-        if ( _.options.responsive &&
-            _.options.responsive.length &&
-            _.options.responsive !== null) {
+.fa-bath:before {
+  content: "\f2cd"; }
 
-            targetBreakpoint = null;
+.fa-battery-empty:before {
+  content: "\f244"; }
 
-            for (breakpoint in _.breakpoints) {
-                if (_.breakpoints.hasOwnProperty(breakpoint)) {
-                    if (_.originalSettings.mobileFirst === false) {
-                        if (respondToWidth < _.breakpoints[breakpoint]) {
-                            targetBreakpoint = _.breakpoints[breakpoint];
-                        }
-                    } else {
-                        if (respondToWidth > _.breakpoints[breakpoint]) {
-                            targetBreakpoint = _.breakpoints[breakpoint];
-                        }
-                    }
-                }
-            }
+.fa-battery-full:before {
+  content: "\f240"; }
 
-            if (targetBreakpoint !== null) {
-                if (_.activeBreakpoint !== null) {
-                    if (targetBreakpoint !== _.activeBreakpoint || forceUpdate) {
-                        _.activeBreakpoint =
-                            targetBreakpoint;
-                        if (_.breakpointSettings[targetBreakpoint] === 'unslick') {
-                            _.unslick(targetBreakpoint);
-                        } else {
-                            _.options = $.extend({}, _.originalSettings,
-                                _.breakpointSettings[
-                                    targetBreakpoint]);
-                            if (initial === true) {
-                                _.currentSlide = _.options.initialSlide;
-                            }
-                            _.refresh(initial);
-                        }
-                        triggerBreakpoint = targetBreakpoint;
-                    }
-                } else {
-                    _.activeBreakpoint = targetBreakpoint;
-                    if (_.breakpointSettings[targetBreakpoint] === 'unslick') {
-                        _.unslick(targetBreakpoint);
-                    } else {
-                        _.options = $.extend({}, _.originalSettings,
-                            _.breakpointSettings[
-                                targetBreakpoint]);
-                        if (initial === true) {
-                            _.currentSlide = _.options.initialSlide;
-                        }
-                        _.refresh(initial);
-                    }
-                    triggerBreakpoint = targetBreakpoint;
-                }
-            } else {
-                if (_.activeBreakpoint !== null) {
-                    _.activeBreakpoint = null;
-                    _.options = _.originalSettings;
-                    if (initial === true) {
-                        _.currentSlide = _.options.initialSlide;
-                    }
-                    _.refresh(initial);
-                    triggerBreakpoint = targetBreakpoint;
-                }
-            }
+.fa-battery-half:before {
+  content: "\f242"; }
 
-            // only trigger breakpoints during an actual break. not on initialize.
-            if( !initial && triggerBreakpoint !== false ) {
-                _.$slider.trigger('breakpoint', [_, triggerBreakpoint]);
-            }
-        }
+.fa-battery-quarter:before {
+  content: "\f243"; }
 
-    };
+.fa-battery-three-quarters:before {
+  content: "\f241"; }
 
-    Slick.prototype.changeSlide = function(event, dontAnimate) {
+.fa-battle-net:before {
+  content: "\f835"; }
 
-        var _ = this,
-            $target = $(event.currentTarget),
-            indexOffset, slideOffset, unevenOffset;
+.fa-bed:before {
+  content: "\f236"; }
 
-        // If target is a link, prevent default action.
-        if($target.is('a')) {
-            event.preventDefault();
-        }
+.fa-beer:before {
+  content: "\f0fc"; }
 
-        // If target is not the <li> element (ie: a child), find the <li>.
-        if(!$target.is('li')) {
-            $target = $target.closest('li');
-        }
+.fa-behance:before {
+  content: "\f1b4"; }
 
-        unevenOffset = (_.slideCount % _.options.slidesToScroll !== 0);
-        indexOffset = unevenOffset ? 0 : (_.slideCount - _.currentSlide) % _.options.slidesToScroll;
+.fa-behance-square:before {
+  content: "\f1b5"; }
 
-        switch (event.data.message) {
+.fa-bell:before {
+  content: "\f0f3"; }
 
-            case 'previous':
-                slideOffset = indexOffset === 0 ? _.options.slidesToScroll : _.options.slidesToShow - indexOffset;
-                if (_.slideCount > _.options.slidesToShow) {
-                    _.slideHandler(_.currentSlide - slideOffset, false, dontAnimate);
-                }
-                break;
+.fa-bell-slash:before {
+  content: "\f1f6"; }
 
-            case 'next':
-                slideOffset = indexOffset === 0 ? _.options.slidesToScroll : indexOffset;
-                if (_.slideCount > _.options.slidesToShow) {
-                    _.slideHandler(_.currentSlide + slideOffset, false, dontAnimate);
-                }
-                break;
+.fa-bezier-curve:before {
+  content: "\f55b"; }
 
-            case 'index':
-                var index = event.data.index === 0 ? 0 :
-                    event.data.index || $target.index() * _.options.slidesToScroll;
+.fa-bible:before {
+  content: "\f647"; }
 
-                _.slideHandler(_.checkNavigable(index), false, dontAnimate);
-                $target.children().trigger('focus');
-                break;
+.fa-bicycle:before {
+  content: "\f206"; }
 
-            default:
-                return;
-        }
+.fa-bimobject:before {
+  content: "\f378"; }
 
-    };
+.fa-binoculars:before {
+  content: "\f1e5"; }
 
-    Slick.prototype.checkNavigable = function(index) {
+.fa-biohazard:before {
+  content: "\f780"; }
 
-        var _ = this,
-            navigables, prevNavigable;
+.fa-birthday-cake:before {
+  content: "\f1fd"; }
 
-        navigables = _.getNavigableIndexes();
-        prevNavigable = 0;
-        if (index > navigables[navigables.length - 1]) {
-            index = navigables[navigables.length - 1];
-        } else {
-            for (var n in navigables) {
-                if (index < navigables[n]) {
-                    index = prevNavigable;
-                    break;
-                }
-                prevNavigable = navigables[n];
-            }
-        }
+.fa-bitbucket:before {
+  content: "\f171"; }
 
-        return index;
-    };
+.fa-bitcoin:before {
+  content: "\f379"; }
 
-    Slick.prototype.cleanUpEvents = function() {
+.fa-bity:before {
+  content: "\f37a"; }
 
-        var _ = this;
+.fa-black-tie:before {
+  content: "\f27e"; }
 
-        if (_.options.dots && _.$dots !== null) {
+.fa-blackberry:before {
+  content: "\f37b"; }
 
-            $('li', _.$dots)
-                .off('click.slick', _.changeSlide)
-                .off('mouseenter.slick', $.proxy(_.interrupt, _, true))
-                .off('mouseleave.slick', $.proxy(_.interrupt, _, false));
+.fa-blender:before {
+  content: "\f517"; }
 
-            if (_.options.accessibility === true) {
-                _.$dots.off('keydown.slick', _.keyHandler);
-            }
-        }
+.fa-blender-phone:before {
+  content: "\f6b6"; }
 
-        _.$slider.off('focus.slick blur.slick');
+.fa-blind:before {
+  content: "\f29d"; }
 
-        if (_.options.arrows === true && _.slideCount > _.options.slidesToShow) {
-            _.$prevArrow && _.$prevArrow.off('click.slick', _.changeSlide);
-            _.$nextArrow && _.$nextArrow.off('click.slick', _.changeSlide);
+.fa-blog:before {
+  content: "\f781"; }
 
-            if (_.options.accessibility === true) {
-                _.$prevArrow && _.$prevArrow.off('keydown.slick', _.keyHandler);
-                _.$nextArrow && _.$nextArrow.off('keydown.slick', _.keyHandler);
-            }
-        }
+.fa-blogger:before {
+  content: "\f37c"; }
 
-        _.$list.off('touchstart.slick mousedown.slick', _.swipeHandler);
-        _.$list.off('touchmove.slick mousemove.slick', _.swipeHandler);
-        _.$list.off('touchend.slick mouseup.slick', _.swipeHandler);
-        _.$list.off('touchcancel.slick mouseleave.slick', _.swipeHandler);
+.fa-blogger-b:before {
+  content: "\f37d"; }
 
-        _.$list.off('click.slick', _.clickHandler);
+.fa-bluetooth:before {
+  content: "\f293"; }
 
-        $(document).off(_.visibilityChange, _.visibility);
+.fa-bluetooth-b:before {
+  content: "\f294"; }
 
-        _.cleanUpSlideEvents();
+.fa-bold:before {
+  content: "\f032"; }
 
-        if (_.options.accessibility === true) {
-            _.$list.off('keydown.slick', _.keyHandler);
-        }
+.fa-bolt:before {
+  content: "\f0e7"; }
 
-        if (_.options.focusOnSelect === true) {
-            $(_.$slideTrack).children().off('click.slick', _.selectHandler);
-        }
+.fa-bomb:before {
+  content: "\f1e2"; }
 
-        $(window).off('orientationchange.slick.slick-' + _.instanceUid, _.orientationChange);
+.fa-bone:before {
+  content: "\f5d7"; }
 
-        $(window).off('resize.slick.slick-' + _.instanceUid, _.resize);
+.fa-bong:before {
+  content: "\f55c"; }
 
-        $('[draggable!=true]', _.$slideTrack).off('dragstart', _.preventDefault);
+.fa-book:before {
+  content: "\f02d"; }
 
-        $(window).off('load.slick.slick-' + _.instanceUid, _.setPosition);
+.fa-book-dead:before {
+  content: "\f6b7"; }
 
-    };
+.fa-book-medical:before {
+  content: "\f7e6"; }
 
-    Slick.prototype.cleanUpSlideEvents = function() {
+.fa-book-open:before {
+  content: "\f518"; }
 
-        var _ = this;
+.fa-book-reader:before {
+  content: "\f5da"; }
 
-        _.$list.off('mouseenter.slick', $.proxy(_.interrupt, _, true));
-        _.$list.off('mouseleave.slick', $.proxy(_.interrupt, _, false));
+.fa-bookmark:before {
+  content: "\f02e"; }
 
-    };
+.fa-bootstrap:before {
+  content: "\f836"; }
 
-    Slick.prototype.cleanUpRows = function() {
+.fa-bowling-ball:before {
+  content: "\f436"; }
 
-        var _ = this, originalSlides;
+.fa-box:before {
+  content: "\f466"; }
 
-        if(_.options.rows > 0) {
-            originalSlides = _.$slides.children().children();
-            originalSlides.removeAttr('style');
-            _.$slider.empty().append(originalSlides);
-        }
+.fa-box-open:before {
+  content: "\f49e"; }
 
-    };
+.fa-boxes:before {
+  content: "\f468"; }
 
-    Slick.prototype.clickHandler = function(event) {
+.fa-braille:before {
+  content: "\f2a1"; }
 
-        var _ = this;
+.fa-brain:before {
+  content: "\f5dc"; }
 
-        if (_.shouldClick === false) {
-            event.stopImmediatePropagation();
-            event.stopPropagation();
-            event.preventDefault();
-        }
+.fa-bread-slice:before {
+  content: "\f7ec"; }
 
-    };
+.fa-briefcase:before {
+  content: "\f0b1"; }
 
-    Slick.prototype.destroy = function(refresh) {
+.fa-briefcase-medical:before {
+  content: "\f469"; }
 
-        var _ = this;
+.fa-broadcast-tower:before {
+  content: "\f519"; }
 
-        _.autoPlayClear();
+.fa-broom:before {
+  content: "\f51a"; }
 
-        _.touchObject = {};
+.fa-brush:before {
+  content: "\f55d"; }
 
-        _.cleanUpEvents();
+.fa-btc:before {
+  content: "\f15a"; }
 
-        $('.slick-cloned', _.$slider).detach();
+.fa-buffer:before {
+  content: "\f837"; }
 
-        if (_.$dots) {
-            _.$dots.remove();
-        }
+.fa-bug:before {
+  content: "\f188"; }
 
-        if ( _.$prevArrow && _.$prevArrow.length ) {
+.fa-building:before {
+  content: "\f1ad"; }
 
-            _.$prevArrow
-                .removeClass('slick-disabled slick-arrow slick-hidden')
-                .removeAttr('aria-hidden aria-disabled tabindex')
-                .css('display','');
+.fa-bullhorn:before {
+  content: "\f0a1"; }
 
-            if ( _.htmlExpr.test( _.options.prevArrow )) {
-                _.$prevArrow.remove();
-            }
-        }
+.fa-bullseye:before {
+  content: "\f140"; }
 
-        if ( _.$nextArrow && _.$nextArrow.length ) {
+.fa-burn:before {
+  content: "\f46a"; }
 
-            _.$nextArrow
-                .removeClass('slick-disabled slick-arrow slick-hidden')
-                .removeAttr('aria-hidden aria-disabled tabindex')
-                .css('display','');
+.fa-buromobelexperte:before {
+  content: "\f37f"; }
 
-            if ( _.htmlExpr.test( _.options.nextArrow )) {
-                _.$nextArrow.remove();
-            }
-        }
+.fa-bus:before {
+  content: "\f207"; }
 
+.fa-bus-alt:before {
+  content: "\f55e"; }
 
-        if (_.$slides) {
+.fa-business-time:before {
+  content: "\f64a"; }
 
-            _.$slides
-                .removeClass('slick-slide slick-active slick-center slick-visible slick-current')
-                .removeAttr('aria-hidden')
-                .removeAttr('data-slick-index')
-                .each(function(){
-                    $(this).attr('style', $(this).data('originalStyling'));
-                });
+.fa-buysellads:before {
+  content: "\f20d"; }
 
-            _.$slideTrack.children(this.options.slide).detach();
+.fa-calculator:before {
+  content: "\f1ec"; }
 
-            _.$slideTrack.detach();
+.fa-calendar:before {
+  content: "\f133"; }
 
-            _.$list.detach();
+.fa-calendar-alt:before {
+  content: "\f073"; }
 
-            _.$slider.append(_.$slides);
-        }
+.fa-calendar-check:before {
+  content: "\f274"; }
 
-        _.cleanUpRows();
+.fa-calendar-day:before {
+  content: "\f783"; }
 
-        _.$slider.removeClass('slick-slider');
-        _.$slider.removeClass('slick-initialized');
-        _.$slider.removeClass('slick-dotted');
+.fa-calendar-minus:before {
+  content: "\f272"; }
 
-        _.unslicked = true;
+.fa-calendar-plus:before {
+  content: "\f271"; }
 
-        if(!refresh) {
-            _.$slider.trigger('destroy', [_]);
-        }
+.fa-calendar-times:before {
+  content: "\f273"; }
 
-    };
+.fa-calendar-week:before {
+  content: "\f784"; }
 
-    Slick.prototype.disableTransition = function(slide) {
+.fa-camera:before {
+  content: "\f030"; }
 
-        var _ = this,
-            transition = {};
+.fa-camera-retro:before {
+  content: "\f083"; }
 
-        transition[_.transitionType] = '';
+.fa-campground:before {
+  content: "\f6bb"; }
 
-        if (_.options.fade === false) {
-            _.$slideTrack.css(transition);
-        } else {
-            _.$slides.eq(slide).css(transition);
-        }
+.fa-canadian-maple-leaf:before {
+  content: "\f785"; }
 
-    };
+.fa-candy-cane:before {
+  content: "\f786"; }
 
-    Slick.prototype.fadeSlide = function(slideIndex, callback) {
+.fa-cannabis:before {
+  content: "\f55f"; }
 
-        var _ = this;
+.fa-capsules:before {
+  content: "\f46b"; }
 
-        if (_.cssTransitions === false) {
+.fa-car:before {
+  content: "\f1b9"; }
 
-            _.$slides.eq(slideIndex).css({
-                zIndex: _.options.zIndex
-            });
+.fa-car-alt:before {
+  content: "\f5de"; }
 
-            _.$slides.eq(slideIndex).animate({
-                opacity: 1
-            }, _.options.speed, _.options.easing, callback);
+.fa-car-battery:before {
+  content: "\f5df"; }
 
-        } else {
+.fa-car-crash:before {
+  content: "\f5e1"; }
 
-            _.applyTransition(slideIndex);
+.fa-car-side:before {
+  content: "\f5e4"; }
 
-            _.$slides.eq(slideIndex).css({
-                opacity: 1,
-                zIndex: _.options.zIndex
-            });
+.fa-caret-down:before {
+  content: "\f0d7"; }
 
-            if (callback) {
-                setTimeout(function() {
+.fa-caret-left:before {
+  content: "\f0d9"; }
 
-                    _.disableTransition(slideIndex);
+.fa-caret-right:before {
+  content: "\f0da"; }
 
-                    callback.call();
-                }, _.options.speed);
-            }
+.fa-caret-square-down:before {
+  content: "\f150"; }
 
-        }
+.fa-caret-square-left:before {
+  content: "\f191"; }
 
-    };
+.fa-caret-square-right:before {
+  content: "\f152"; }
 
-    Slick.prototype.fadeSlideOut = function(slideIndex) {
+.fa-caret-square-up:before {
+  content: "\f151"; }
 
-        var _ = this;
+.fa-caret-up:before {
+  content: "\f0d8"; }
 
-        if (_.cssTransitions === false) {
+.fa-carrot:before {
+  content: "\f787"; }
 
-            _.$slides.eq(slideIndex).animate({
-                opacity: 0,
-                zIndex: _.options.zIndex - 2
-            }, _.options.speed, _.options.easing);
+.fa-cart-arrow-down:before {
+  content: "\f218"; }
 
-        } else {
+.fa-cart-plus:before {
+  content: "\f217"; }
 
-            _.applyTransition(slideIndex);
+.fa-cash-register:before {
+  content: "\f788"; }
 
-            _.$slides.eq(slideIndex).css({
-                opacity: 0,
-                zIndex: _.options.zIndex - 2
-            });
+.fa-cat:before {
+  content: "\f6be"; }
 
-        }
+.fa-cc-amazon-pay:before {
+  content: "\f42d"; }
 
-    };
+.fa-cc-amex:before {
+  content: "\f1f3"; }
 
-    Slick.prototype.filterSlides = Slick.prototype.slickFilter = function(filter) {
+.fa-cc-apple-pay:before {
+  content: "\f416"; }
 
-        var _ = this;
+.fa-cc-diners-club:before {
+  content: "\f24c"; }
 
-        if (filter !== null) {
+.fa-cc-discover:before {
+  content: "\f1f2"; }
 
-            _.$slidesCache = _.$slides;
+.fa-cc-jcb:before {
+  content: "\f24b"; }
 
-            _.unload();
+.fa-cc-mastercard:before {
+  content: "\f1f1"; }
 
-            _.$slideTrack.children(this.options.slide).detach();
+.fa-cc-paypal:before {
+  content: "\f1f4"; }
 
-            _.$slidesCache.filter(filter).appendTo(_.$slideTrack);
+.fa-cc-stripe:before {
+  content: "\f1f5"; }
 
-            _.reinit();
+.fa-cc-visa:before {
+  content: "\f1f0"; }
 
-        }
+.fa-centercode:before {
+  content: "\f380"; }
 
-    };
+.fa-centos:before {
+  content: "\f789"; }
 
-    Slick.prototype.focusHandler = function() {
+.fa-certificate:before {
+  content: "\f0a3"; }
 
-        var _ = this;
+.fa-chair:before {
+  content: "\f6c0"; }
 
-        _.$slider
-            .off('focus.slick blur.slick')
-            .on('focus.slick blur.slick', '*', function(event) {
+.fa-chalkboard:before {
+  content: "\f51b"; }
 
-            event.stopImmediatePropagation();
-            var $sf = $(this);
+.fa-chalkboard-teacher:before {
+  content: "\f51c"; }
 
-            setTimeout(function() {
+.fa-charging-station:before {
+  content: "\f5e7"; }
 
-                if( _.options.pauseOnFocus ) {
-                    _.focussed = $sf.is(':focus');
-                    _.autoPlay();
-                }
+.fa-chart-area:before {
+  content: "\f1fe"; }
 
-            }, 0);
+.fa-chart-bar:before {
+  content: "\f080"; }
 
-        });
-    };
+.fa-chart-line:before {
+  content: "\f201"; }
 
-    Slick.prototype.getCurrent = Slick.prototype.slickCurrentSlide = function() {
+.fa-chart-pie:before {
+  content: "\f200"; }
 
-        var _ = this;
-        return _.currentSlide;
+.fa-check:before {
+  content: "\f00c"; }
 
-    };
+.fa-check-circle:before {
+  content: "\f058"; }
 
-    Slick.prototype.getDotCount = function() {
+.fa-check-double:before {
+  content: "\f560"; }
 
-        var _ = this;
+.fa-check-square:before {
+  content: "\f14a"; }
 
-        var breakPoint = 0;
-        var counter = 0;
-        var pagerQty = 0;
+.fa-cheese:before {
+  content: "\f7ef"; }
 
-        if (_.options.infinite === true) {
-            if (_.slideCount <= _.options.slidesToShow) {
-                 ++pagerQty;
-            } else {
-                while (breakPoint < _.slideCount) {
-                    ++pagerQty;
-                    breakPoint = counter + _.options.slidesToScroll;
-                    counter += _.options.slidesToScroll <= _.options.slidesToShow ? _.options.slidesToScroll : _.options.slidesToShow;
-                }
-            }
-        } else if (_.options.centerMode === true) {
-            pagerQty = _.slideCount;
-        } else if(!_.options.asNavFor) {
-            pagerQty = 1 + Math.ceil((_.slideCount - _.options.slidesToShow) / _.options.slidesToScroll);
-        }else {
-            while (breakPoint < _.slideCount) {
-                ++pagerQty;
-                breakPoint = counter + _.options.slidesToScroll;
-                counter += _.options.slidesToScroll <= _.options.slidesToShow ? _.options.slidesToScroll : _.options.slidesToShow;
-            }
-        }
+.fa-chess:before {
+  content: "\f439"; }
 
-        return pagerQty - 1;
+.fa-chess-bishop:before {
+  content: "\f43a"; }
 
-    };
+.fa-chess-board:before {
+  content: "\f43c"; }
 
-    Slick.prototype.getLeft = function(slideIndex) {
+.fa-chess-king:before {
+  content: "\f43f"; }
 
-        var _ = this,
-            targetLeft,
-            verticalHeight,
-            verticalOffset = 0,
-            targetSlide,
-            coef;
+.fa-chess-knight:before {
+  content: "\f441"; }
 
-        _.slideOffset = 0;
-        verticalHeight = _.$slides.first().outerHeight(true);
+.fa-chess-pawn:before {
+  content: "\f443"; }
 
-        if (_.options.infinite === true) {
-            if (_.slideCount > _.options.slidesToShow) {
-                _.slideOffset = (_.slideWidth * _.options.slidesToShow) * -1;
-                coef = -1
+.fa-chess-queen:before {
+  content: "\f445"; }
 
-                if (_.options.vertical === true && _.options.centerMode === true) {
-                    if (_.options.slidesToShow === 2) {
-                        coef = -1.5;
-                    } else if (_.options.slidesToShow === 1) {
-                        coef = -2
-                    }
-                }
-                verticalOffset = (verticalHeight * _.options.slidesToShow) * coef;
-            }
-            if (_.slideCount % _.options.slidesToScroll !== 0) {
-                if (slideIndex + _.options.slidesToScroll > _.slideCount && _.slideCount > _.options.slidesToShow) {
-                    if (slideIndex > _.slideCount) {
-                        _.slideOffset = ((_.options.slidesToShow - (slideIndex - _.slideCount)) * _.slideWidth) * -1;
-                        verticalOffset = ((_.options.slidesToShow - (slideIndex - _.slideCount)) * verticalHeight) * -1;
-                    } else {
-                        _.slideOffset = ((_.slideCount % _.options.slidesToScroll) * _.slideWidth) * -1;
-                        verticalOffset = ((_.slideCount % _.options.slidesToScroll) * verticalHeight) * -1;
-                    }
-                }
-            }
-        } else {
-            if (slideIndex + _.options.slidesToShow > _.slideCount) {
-                _.slideOffset = ((slideIndex + _.options.slidesToShow) - _.slideCount) * _.slideWidth;
-                verticalOffset = ((slideIndex + _.options.slidesToShow) - _.slideCount) * verticalHeight;
-            }
-        }
+.fa-chess-rook:before {
+  content: "\f447"; }
 
-        if (_.slideCount <= _.options.slidesToShow) {
-            _.slideOffset = 0;
-            verticalOffset = 0;
-        }
+.fa-chevron-circle-down:before {
+  content: "\f13a"; }
 
-        if (_.options.centerMode === true && _.slideCount <= _.options.slidesToShow) {
-            _.slideOffset = ((_.slideWidth * Math.floor(_.options.slidesToShow)) / 2) - ((_.slideWidth * _.slideCount) / 2);
-        } else if (_.options.centerMode === true && _.options.infinite === true) {
-            _.slideOffset += _.slideWidth * Math.floor(_.options.slidesToShow / 2) - _.slideWidth;
-        } else if (_.options.centerMode === true) {
-            _.slideOffset = 0;
-            _.slideOffset += _.slideWidth * Math.floor(_.options.slidesToShow / 2);
-        }
+.fa-chevron-circle-left:before {
+  content: "\f137"; }
 
-        if (_.options.vertical === false) {
-            targetLeft = ((slideIndex * _.slideWidth) * -1) + _.slideOffset;
-        } else {
-            targetLeft = ((slideIndex * verticalHeight) * -1) + verticalOffset;
-        }
+.fa-chevron-circle-right:before {
+  content: "\f138"; }
 
-        if (_.options.variableWidth === true) {
+.fa-chevron-circle-up:before {
+  content: "\f139"; }
 
-            if (_.slideCount <= _.options.slidesToShow || _.options.infinite === false) {
-                targetSlide = _.$slideTrack.children('.slick-slide').eq(slideIndex);
-            } else {
-                targetSlide = _.$slideTrack.children('.slick-slide').eq(slideIndex + _.options.slidesToShow);
-            }
+.fa-chevron-down:before {
+  content: "\f078"; }
 
-            if (_.options.rtl === true) {
-                if (targetSlide[0]) {
-                    targetLeft = (_.$slideTrack.width() - targetSlide[0].offsetLeft - targetSlide.width()) * -1;
-                } else {
-                    targetLeft =  0;
-                }
-            } else {
-                targetLeft = targetSlide[0] ? targetSlide[0].offsetLeft * -1 : 0;
-            }
+.fa-chevron-left:before {
+  content: "\f053"; }
 
-            if (_.options.centerMode === true) {
-                if (_.slideCount <= _.options.slidesToShow || _.options.infinite === false) {
-                    targetSlide = _.$slideTrack.children('.slick-slide').eq(slideIndex);
-                } else {
-                    targetSlide = _.$slideTrack.children('.slick-slide').eq(slideIndex + _.options.slidesToShow + 1);
-                }
+.fa-chevron-right:before {
+  content: "\f054"; }
 
-                if (_.options.rtl === true) {
-                    if (targetSlide[0]) {
-                        targetLeft = (_.$slideTrack.width() - targetSlide[0].offsetLeft - targetSlide.width()) * -1;
-                    } else {
-                        targetLeft =  0;
-                    }
-                } else {
-                    targetLeft = targetSlide[0] ? targetSlide[0].offsetLeft * -1 : 0;
-                }
+.fa-chevron-up:before {
+  content: "\f077"; }
 
-                targetLeft += (_.$list.width() - targetSlide.outerWidth()) / 2;
-            }
-        }
+.fa-child:before {
+  content: "\f1ae"; }
 
-        return targetLeft;
+.fa-chrome:before {
+  content: "\f268"; }
 
-    };
+.fa-chromecast:before {
+  content: "\f838"; }
 
-    Slick.prototype.getOption = Slick.prototype.slickGetOption = function(option) {
+.fa-church:before {
+  content: "\f51d"; }
 
-        var _ = this;
+.fa-circle:before {
+  content: "\f111"; }
 
-        return _.options[option];
+.fa-circle-notch:before {
+  content: "\f1ce"; }
 
-    };
+.fa-city:before {
+  content: "\f64f"; }
 
-    Slick.prototype.getNavigableIndexes = function() {
+.fa-clinic-medical:before {
+  content: "\f7f2"; }
 
-        var _ = this,
-            breakPoint = 0,
-            counter = 0,
-            indexes = [],
-            max;
+.fa-clipboard:before {
+  content: "\f328"; }
 
-        if (_.options.infinite === false) {
-            max = _.slideCount;
-        } else {
-            breakPoint = _.options.slidesToScroll * -1;
-            counter = _.options.slidesToScroll * -1;
-            max = _.slideCount * 2;
-        }
+.fa-clipboard-check:before {
+  content: "\f46c"; }
 
-        while (breakPoint < max) {
-            indexes.push(breakPoint);
-            breakPoint = counter + _.options.slidesToScroll;
-            counter += _.options.slidesToScroll <= _.options.slidesToShow ? _.options.slidesToScroll : _.options.slidesToShow;
-        }
+.fa-clipboard-list:before {
+  content: "\f46d"; }
 
-        return indexes;
+.fa-clock:before {
+  content: "\f017"; }
 
-    };
+.fa-clone:before {
+  content: "\f24d"; }
 
-    Slick.prototype.getSlick = function() {
+.fa-closed-captioning:before {
+  content: "\f20a"; }
 
-        return this;
+.fa-cloud:before {
+  content: "\f0c2"; }
 
-    };
+.fa-cloud-download-alt:before {
+  content: "\f381"; }
 
-    Slick.prototype.getSlideCount = function() {
+.fa-cloud-meatball:before {
+  content: "\f73b"; }
 
-        var _ = this,
-            slidesTraversed, swipedSlide, centerOffset;
+.fa-cloud-moon:before {
+  content: "\f6c3"; }
 
-        centerOffset = _.options.centerMode === true ? _.slideWidth * Math.floor(_.options.slidesToShow / 2) : 0;
+.fa-cloud-moon-rain:before {
+  content: "\f73c"; }
 
-        if (_.options.swipeToSlide === true) {
-            _.$slideTrack.find('.slick-slide').each(function(index, slide) {
-                if (slide.offsetLeft - centerOffset + ($(slide).outerWidth() / 2) > (_.swipeLeft * -1)) {
-                    swipedSlide = slide;
-                    return false;
-                }
-            });
+.fa-cloud-rain:before {
+  content: "\f73d"; }
 
-            slidesTraversed = Math.abs($(swipedSlide).attr('data-slick-index') - _.currentSlide) || 1;
+.fa-cloud-showers-heavy:before {
+  content: "\f740"; }
 
-            return slidesTraversed;
+.fa-cloud-sun:before {
+  content: "\f6c4"; }
 
-        } else {
-            return _.options.slidesToScroll;
-        }
+.fa-cloud-sun-rain:before {
+  content: "\f743"; }
 
-    };
+.fa-cloud-upload-alt:before {
+  content: "\f382"; }
 
-    Slick.prototype.goTo = Slick.prototype.slickGoTo = function(slide, dontAnimate) {
+.fa-cloudscale:before {
+  content: "\f383"; }
 
-        var _ = this;
+.fa-cloudsmith:before {
+  content: "\f384"; }
 
-        _.changeSlide({
-            data: {
-                message: 'index',
-                index: parseInt(slide)
-            }
-        }, dontAnimate);
+.fa-cloudversify:before {
+  content: "\f385"; }
 
-    };
+.fa-cocktail:before {
+  content: "\f561"; }
 
-    Slick.prototype.init = function(creation) {
+.fa-code:before {
+  content: "\f121"; }
 
-        var _ = this;
+.fa-code-branch:before {
+  content: "\f126"; }
 
-        if (!$(_.$slider).hasClass('slick-initialized')) {
+.fa-codepen:before {
+  content: "\f1cb"; }
 
-            $(_.$slider).addClass('slick-initialized');
+.fa-codiepie:before {
+  content: "\f284"; }
 
-            _.buildRows();
-            _.buildOut();
-            _.setProps();
-            _.startLoad();
-            _.loadSlider();
-            _.initializeEvents();
-            _.updateArrows();
-            _.updateDots();
-            _.checkResponsive(true);
-            _.focusHandler();
+.fa-coffee:before {
+  content: "\f0f4"; }
 
-        }
+.fa-cog:before {
+  content: "\f013"; }
 
-        if (creation) {
-            _.$slider.trigger('init', [_]);
-        }
+.fa-cogs:before {
+  content: "\f085"; }
 
-        if (_.options.accessibility === true) {
-            _.initADA();
-        }
+.fa-coins:before {
+  content: "\f51e"; }
 
-        if ( _.options.autoplay ) {
+.fa-columns:before {
+  content: "\f0db"; }
 
-            _.paused = false;
-            _.autoPlay();
+.fa-comment:before {
+  content: "\f075"; }
 
-        }
+.fa-comment-alt:before {
+  content: "\f27a"; }
 
-    };
+.fa-comment-dollar:before {
+  content: "\f651"; }
 
-    Slick.prototype.initADA = function() {
-        var _ = this,
-                numDotGroups = Math.ceil(_.slideCount / _.options.slidesToShow),
-                tabControlIndexes = _.getNavigableIndexes().filter(function(val) {
-                    return (val >= 0) && (val < _.slideCount);
-                });
+.fa-comment-dots:before {
+  content: "\f4ad"; }
 
-        _.$slides.add(_.$slideTrack.find('.slick-cloned')).attr({
-            'aria-hidden': 'true',
-            'tabindex': '-1'
-        }).find('a, input, button, select').attr({
-            'tabindex': '-1'
-        });
+.fa-comment-medical:before {
+  content: "\f7f5"; }
 
-        if (_.$dots !== null) {
-            _.$slides.not(_.$slideTrack.find('.slick-cloned')).each(function(i) {
-                var slideControlIndex = tabControlIndexes.indexOf(i);
+.fa-comment-slash:before {
+  content: "\f4b3"; }
 
-                $(this).attr({
-                    'role': 'tabpanel',
-                    'id': 'slick-slide' + _.instanceUid + i,
-                    'tabindex': -1
-                });
+.fa-comments:before {
+  content: "\f086"; }
 
-                if (slideControlIndex !== -1) {
-                   var ariaButtonControl = 'slick-slide-control' + _.instanceUid + slideControlIndex
-                   if ($('#' + ariaButtonControl).length) {
-                     $(this).attr({
-                         'aria-describedby': ariaButtonControl
-                     });
-                   }
-                }
-            });
+.fa-comments-dollar:before {
+  content: "\f653"; }
 
-            _.$dots.attr('role', 'tablist').find('li').each(function(i) {
-                var mappedSlideIndex = tabControlIndexes[i];
+.fa-compact-disc:before {
+  content: "\f51f"; }
 
-                $(this).attr({
-                    'role': 'presentation'
-                });
+.fa-compass:before {
+  content: "\f14e"; }
 
-                $(this).find('button').first().attr({
-                    'role': 'tab',
-                    'id': 'slick-slide-control' + _.instanceUid + i,
-                    'aria-controls': 'slick-slide' + _.instanceUid + mappedSlideIndex,
-                    'aria-label': (i + 1) + ' of ' + numDotGroups,
-                    'aria-selected': null,
-                    'tabindex': '-1'
-                });
+.fa-compress:before {
+  content: "\f066"; }
 
-            }).eq(_.currentSlide).find('button').attr({
-                'aria-selected': 'true',
-                'tabindex': '0'
-            }).end();
-        }
+.fa-compress-arrows-alt:before {
+  content: "\f78c"; }
 
-        for (var i=_.currentSlide, max=i+_.options.slidesToShow; i < max; i++) {
-          if (_.options.focusOnChange) {
-            _.$slides.eq(i).attr({'tabindex': '0'});
-          } else {
-            _.$slides.eq(i).removeAttr('tabindex');
-          }
-        }
+.fa-concierge-bell:before {
+  content: "\f562"; }
 
-        _.activateADA();
+.fa-confluence:before {
+  content: "\f78d"; }
 
-    };
+.fa-connectdevelop:before {
+  content: "\f20e"; }
 
-    Slick.prototype.initArrowEvents = function() {
+.fa-contao:before {
+  content: "\f26d"; }
 
-        var _ = this;
+.fa-cookie:before {
+  content: "\f563"; }
 
-        if (_.options.arrows === true && _.slideCount > _.options.slidesToShow) {
-            _.$prevArrow
-               .off('click.slick')
-               .on('click.slick', {
-                    message: 'previous'
-               }, _.changeSlide);
-            _.$nextArrow
-               .off('click.slick')
-               .on('click.slick', {
-                    message: 'next'
-               }, _.changeSlide);
+.fa-cookie-bite:before {
+  content: "\f564"; }
 
-            if (_.options.accessibility === true) {
-                _.$prevArrow.on('keydown.slick', _.keyHandler);
-                _.$nextArrow.on('keydown.slick', _.keyHandler);
-            }
-        }
+.fa-copy:before {
+  content: "\f0c5"; }
 
-    };
+.fa-copyright:before {
+  content: "\f1f9"; }
 
-    Slick.prototype.initDotEvents = function() {
+.fa-couch:before {
+  content: "\f4b8"; }
 
-        var _ = this;
+.fa-cpanel:before {
+  content: "\f388"; }
 
-        if (_.options.dots === true && _.slideCount > _.options.slidesToShow) {
-            $('li', _.$dots).on('click.slick', {
-                message: 'index'
-            }, _.changeSlide);
+.fa-creative-commons:before {
+  content: "\f25e"; }
 
-            if (_.options.accessibility === true) {
-                _.$dots.on('keydown.slick', _.keyHandler);
-            }
-        }
+.fa-creative-commons-by:before {
+  content: "\f4e7"; }
 
-        if (_.options.dots === true && _.options.pauseOnDotsHover === true && _.slideCount > _.options.slidesToShow) {
+.fa-creative-commons-nc:before {
+  content: "\f4e8"; }
 
-            $('li', _.$dots)
-                .on('mouseenter.slick', $.proxy(_.interrupt, _, true))
-                .on('mouseleave.slick', $.proxy(_.interrupt, _, false));
+.fa-creative-commons-nc-eu:before {
+  content: "\f4e9"; }
 
-        }
+.fa-creative-commons-nc-jp:before {
+  content: "\f4ea"; }
 
-    };
+.fa-creative-commons-nd:before {
+  content: "\f4eb"; }
 
-    Slick.prototype.initSlideEvents = function() {
+.fa-creative-commons-pd:before {
+  content: "\f4ec"; }
 
-        var _ = this;
+.fa-creative-commons-pd-alt:before {
+  content: "\f4ed"; }
 
-        if ( _.options.pauseOnHover ) {
+.fa-creative-commons-remix:before {
+  content: "\f4ee"; }
 
-            _.$list.on('mouseenter.slick', $.proxy(_.interrupt, _, true));
-            _.$list.on('mouseleave.slick', $.proxy(_.interrupt, _, false));
+.fa-creative-commons-sa:before {
+  content: "\f4ef"; }
 
-        }
+.fa-creative-commons-sampling:before {
+  content: "\f4f0"; }
 
-    };
+.fa-creative-commons-sampling-plus:before {
+  content: "\f4f1"; }
 
-    Slick.prototype.initializeEvents = function() {
+.fa-creative-commons-share:before {
+  content: "\f4f2"; }
 
-        var _ = this;
+.fa-creative-commons-zero:before {
+  content: "\f4f3"; }
 
-        _.initArrowEvents();
+.fa-credit-card:before {
+  content: "\f09d"; }
 
-        _.initDotEvents();
-        _.initSlideEvents();
+.fa-critical-role:before {
+  content: "\f6c9"; }
 
-        _.$list.on('touchstart.slick mousedown.slick', {
-            action: 'start'
-        }, _.swipeHandler);
-        _.$list.on('touchmove.slick mousemove.slick', {
-            action: 'move'
-        }, _.swipeHandler);
-        _.$list.on('touchend.slick mouseup.slick', {
-            action: 'end'
-        }, _.swipeHandler);
-        _.$list.on('touchcancel.slick mouseleave.slick', {
-            action: 'end'
-        }, _.swipeHandler);
+.fa-crop:before {
+  content: "\f125"; }
 
-        _.$list.on('click.slick', _.clickHandler);
+.fa-crop-alt:before {
+  content: "\f565"; }
 
-        $(document).on(_.visibilityChange, $.proxy(_.visibility, _));
+.fa-cross:before {
+  content: "\f654"; }
 
-        if (_.options.accessibility === true) {
-            _.$list.on('keydown.slick', _.keyHandler);
-        }
+.fa-crosshairs:before {
+  content: "\f05b"; }
 
-        if (_.options.focusOnSelect === true) {
-            $(_.$slideTrack).children().on('click.slick', _.selectHandler);
-        }
+.fa-crow:before {
+  content: "\f520"; }
 
-        $(window).on('orientationchange.slick.slick-' + _.instanceUid, $.proxy(_.orientationChange, _));
+.fa-crown:before {
+  content: "\f521"; }
 
-        $(window).on('resize.slick.slick-' + _.instanceUid, $.proxy(_.resize, _));
+.fa-crutch:before {
+  content: "\f7f7"; }
 
-        $('[draggable!=true]', _.$slideTrack).on('dragstart', _.preventDefault);
+.fa-css3:before {
+  content: "\f13c"; }
 
-        $(window).on('load.slick.slick-' + _.instanceUid, _.setPosition);
-        $(_.setPosition);
+.fa-css3-alt:before {
+  content: "\f38b"; }
 
-    };
+.fa-cube:before {
+  content: "\f1b2"; }
 
-    Slick.prototype.initUI = function() {
+.fa-cubes:before {
+  content: "\f1b3"; }
 
-        var _ = this;
+.fa-cut:before {
+  content: "\f0c4"; }
 
-        if (_.options.arrows === true && _.slideCount > _.options.slidesToShow) {
+.fa-cuttlefish:before {
+  content: "\f38c"; }
 
-            _.$prevArrow.show();
-            _.$nextArrow.show();
+.fa-d-and-d:before {
+  content: "\f38d"; }
 
-        }
+.fa-d-and-d-beyond:before {
+  content: "\f6ca"; }
 
-        if (_.options.dots === true && _.slideCount > _.options.slidesToShow) {
+.fa-dashcube:before {
+  content: "\f210"; }
 
-            _.$dots.show();
+.fa-database:before {
+  content: "\f1c0"; }
 
-        }
+.fa-deaf:before {
+  content: "\f2a4"; }
 
-    };
+.fa-delicious:before {
+  content: "\f1a5"; }
 
-    Slick.prototype.keyHandler = function(event) {
+.fa-democrat:before {
+  content: "\f747"; }
 
-        var _ = this;
-         //Dont slide if the cursor is inside the form fields and arrow keys are pressed
-        if(!event.target.tagName.match('TEXTAREA|INPUT|SELECT')) {
-            if (event.keyCode === 37 && _.options.accessibility === true) {
-                _.changeSlide({
-                    data: {
-                        message: _.options.rtl === true ? 'next' :  'previous'
-                    }
-                });
-            } else if (event.keyCode === 39 && _.options.accessibility === true) {
-                _.changeSlide({
-                    data: {
-                        message: _.options.rtl === true ? 'previous' : 'next'
-                    }
-                });
-            }
-        }
+.fa-deploydog:before {
+  content: "\f38e"; }
 
-    };
+.fa-deskpro:before {
+  content: "\f38f"; }
 
-    Slick.prototype.lazyLoad = function() {
+.fa-desktop:before {
+  content: "\f108"; }
 
-        var _ = this,
-            loadRange, cloneRange, rangeStart, rangeEnd;
+.fa-dev:before {
+  content: "\f6cc"; }
 
-        function loadImages(imagesScope) {
+.fa-deviantart:before {
+  content: "\f1bd"; }
 
-            $('img[data-lazy]', imagesScope).each(function() {
+.fa-dharmachakra:before {
+  content: "\f655"; }
 
-                var image = $(this),
-                    imageSource = $(this).attr('data-lazy'),
-                    imageSrcSet = $(this).attr('data-srcset'),
-                    imageSizes  = $(this).attr('data-sizes') || _.$slider.attr('data-sizes'),
-                    imageToLoad = document.createElement('img');
+.fa-dhl:before {
+  content: "\f790"; }
 
-                imageToLoad.onload = function() {
+.fa-diagnoses:before {
+  content: "\f470"; }
 
-                    image
-                        .animate({ opacity: 0 }, 100, function() {
+.fa-diaspora:before {
+  content: "\f791"; }
 
-                            if (imageSrcSet) {
-                                image
-                                    .attr('srcset', imageSrcSet );
+.fa-dice:before {
+  content: "\f522"; }
 
-                                if (imageSizes) {
-                                    image
-                                        .attr('sizes', imageSizes );
-                                }
-                            }
+.fa-dice-d20:before {
+  content: "\f6cf"; }
 
-                            image
-                                .attr('src', imageSource)
-                                .animate({ opacity: 1 }, 200, function() {
-                                    image
-                                        .removeAttr('data-lazy data-srcset data-sizes')
-                                        .removeClass('slick-loading');
-                                });
-                            _.$slider.trigger('lazyLoaded', [_, image, imageSource]);
-                        });
+.fa-dice-d6:before {
+  content: "\f6d1"; }
 
-                };
+.fa-dice-five:before {
+  content: "\f523"; }
 
-                imageToLoad.onerror = function() {
+.fa-dice-four:before {
+  content: "\f524"; }
 
-                    image
-                        .removeAttr( 'data-lazy' )
-                        .removeClass( 'slick-loading' )
-                        .addClass( 'slick-lazyload-error' );
+.fa-dice-one:before {
+  content: "\f525"; }
 
-                    _.$slider.trigger('lazyLoadError', [ _, image, imageSource ]);
+.fa-dice-six:before {
+  content: "\f526"; }
 
-                };
+.fa-dice-three:before {
+  content: "\f527"; }
 
-                imageToLoad.src = imageSource;
+.fa-dice-two:before {
+  content: "\f528"; }
 
-            });
+.fa-digg:before {
+  content: "\f1a6"; }
 
-        }
+.fa-digital-ocean:before {
+  content: "\f391"; }
 
-        if (_.options.centerMode === true) {
-            if (_.options.infinite === true) {
-                rangeStart = _.currentSlide + (_.options.slidesToShow / 2 + 1);
-                rangeEnd = rangeStart + _.options.slidesToShow + 2;
-            } else {
-                rangeStart = Math.max(0, _.currentSlide - (_.options.slidesToShow / 2 + 1));
-                rangeEnd = 2 + (_.options.slidesToShow / 2 + 1) + _.currentSlide;
-            }
-        } else {
-            rangeStart = _.options.infinite ? _.options.slidesToShow + _.currentSlide : _.currentSlide;
-            rangeEnd = Math.ceil(rangeStart + _.options.slidesToShow);
-            if (_.options.fade === true) {
-                if (rangeStart > 0) rangeStart--;
-                if (rangeEnd <= _.slideCount) rangeEnd++;
-            }
-        }
+.fa-digital-tachograph:before {
+  content: "\f566"; }
 
-        loadRange = _.$slider.find('.slick-slide').slice(rangeStart, rangeEnd);
+.fa-directions:before {
+  content: "\f5eb"; }
 
-        if (_.options.lazyLoad === 'anticipated') {
-            var prevSlide = rangeStart - 1,
-                nextSlide = rangeEnd,
-                $slides = _.$slider.find('.slick-slide');
+.fa-discord:before {
+  content: "\f392"; }
 
-            for (var i = 0; i < _.options.slidesToScroll; i++) {
-                if (prevSlide < 0) prevSlide = _.slideCount - 1;
-                loadRange = loadRange.add($slides.eq(prevSlide));
-                loadRange = loadRange.add($slides.eq(nextSlide));
-                prevSlide--;
-                nextSlide++;
-            }
-        }
+.fa-discourse:before {
+  content: "\f393"; }
 
-        loadImages(loadRange);
+.fa-divide:before {
+  content: "\f529"; }
 
-        if (_.slideCount <= _.options.slidesToShow) {
-            cloneRange = _.$slider.find('.slick-slide');
-            loadImages(cloneRange);
-        } else
-        if (_.currentSlide >= _.slideCount - _.options.slidesToShow) {
-            cloneRange = _.$slider.find('.slick-cloned').slice(0, _.options.slidesToShow);
-            loadImages(cloneRange);
-        } else if (_.currentSlide === 0) {
-            cloneRange = _.$slider.find('.slick-cloned').slice(_.options.slidesToShow * -1);
-            loadImages(cloneRange);
-        }
+.fa-dizzy:before {
+  content: "\f567"; }
 
-    };
+.fa-dna:before {
+  content: "\f471"; }
 
-    Slick.prototype.loadSlider = function() {
+.fa-dochub:before {
+  content: "\f394"; }
 
-        var _ = this;
+.fa-docker:before {
+  content: "\f395"; }
 
-        _.setPosition();
+.fa-dog:before {
+  content: "\f6d3"; }
 
-        _.$slideTrack.css({
-            opacity: 1
-        });
+.fa-dollar-sign:before {
+  content: "\f155"; }
 
-        _.$slider.removeClass('slick-loading');
+.fa-dolly:before {
+  content: "\f472"; }
 
-        _.initUI();
+.fa-dolly-flatbed:before {
+  content: "\f474"; }
 
-        if (_.options.lazyLoad === 'progressive') {
-            _.progressiveLazyLoad();
-        }
+.fa-donate:before {
+  content: "\f4b9"; }
 
-    };
+.fa-door-closed:before {
+  content: "\f52a"; }
 
-    Slick.prototype.next = Slick.prototype.slickNext = function() {
+.fa-door-open:before {
+  content: "\f52b"; }
 
-        var _ = this;
+.fa-dot-circle:before {
+  content: "\f192"; }
 
-        _.changeSlide({
-            data: {
-                message: 'next'
-            }
-        });
+.fa-dove:before {
+  content: "\f4ba"; }
 
-    };
+.fa-download:before {
+  content: "\f019"; }
 
-    Slick.prototype.orientationChange = function() {
+.fa-draft2digital:before {
+  content: "\f396"; }
 
-        var _ = this;
+.fa-drafting-compass:before {
+  content: "\f568"; }
 
-        _.checkResponsive();
-        _.setPosition();
+.fa-dragon:before {
+  content: "\f6d5"; }
 
-    };
+.fa-draw-polygon:before {
+  content: "\f5ee"; }
 
-    Slick.prototype.pause = Slick.prototype.slickPause = function() {
+.fa-dribbble:before {
+  content: "\f17d"; }
 
-        var _ = this;
+.fa-dribbble-square:before {
+  content: "\f397"; }
 
-        _.autoPlayClear();
-        _.paused = true;
+.fa-dropbox:before {
+  content: "\f16b"; }
 
-    };
+.fa-drum:before {
+  content: "\f569"; }
 
-    Slick.prototype.play = Slick.prototype.slickPlay = function() {
+.fa-drum-steelpan:before {
+  content: "\f56a"; }
 
-        var _ = this;
+.fa-drumstick-bite:before {
+  content: "\f6d7"; }
 
-        _.autoPlay();
-        _.options.autoplay = true;
-        _.paused = false;
-        _.focussed = false;
-        _.interrupted = false;
+.fa-drupal:before {
+  content: "\f1a9"; }
 
-    };
+.fa-dumbbell:before {
+  content: "\f44b"; }
 
-    Slick.prototype.postSlide = function(index) {
+.fa-dumpster:before {
+  content: "\f793"; }
 
-        var _ = this;
+.fa-dumpster-fire:before {
+  content: "\f794"; }
 
-        if( !_.unslicked ) {
+.fa-dungeon:before {
+  content: "\f6d9"; }
 
-            _.$slider.trigger('afterChange', [_, index]);
+.fa-dyalog:before {
+  content: "\f399"; }
 
-            _.animating = false;
+.fa-earlybirds:before {
+  content: "\f39a"; }
 
-            if (_.slideCount > _.options.slidesToShow) {
-                _.setPosition();
-            }
+.fa-ebay:before {
+  content: "\f4f4"; }
 
-            _.swipeLeft = null;
+.fa-edge:before {
+  content: "\f282"; }
 
-            if ( _.options.autoplay ) {
-                _.autoPlay();
-            }
+.fa-edit:before {
+  content: "\f044"; }
 
-            if (_.options.accessibility === true) {
-                _.initADA();
+.fa-egg:before {
+  content: "\f7fb"; }
 
-                if (_.options.focusOnChange) {
-                    var $currentSlide = $(_.$slides.get(_.currentSlide));
-                    $currentSlide.attr('tabindex', 0).focus();
-                }
-            }
+.fa-eject:before {
+  content: "\f052"; }
 
-        }
+.fa-elementor:before {
+  content: "\f430"; }
 
-    };
+.fa-ellipsis-h:before {
+  content: "\f141"; }
 
-    Slick.prototype.prev = Slick.prototype.slickPrev = function() {
+.fa-ellipsis-v:before {
+  content: "\f142"; }
 
-        var _ = this;
+.fa-ello:before {
+  content: "\f5f1"; }
 
-        _.changeSlide({
-            data: {
-                message: 'previous'
-            }
-        });
+.fa-ember:before {
+  content: "\f423"; }
 
-    };
+.fa-empire:before {
+  content: "\f1d1"; }
 
-    Slick.prototype.preventDefault = function(event) {
+.fa-envelope:before {
+  content: "\f0e0"; }
 
-        event.preventDefault();
+.fa-envelope-open:before {
+  content: "\f2b6"; }
 
-    };
+.fa-envelope-open-text:before {
+  content: "\f658"; }
 
-    Slick.prototype.progressiveLazyLoad = function( tryCount ) {
+.fa-envelope-square:before {
+  content: "\f199"; }
 
-        tryCount = tryCount || 1;
+.fa-envira:before {
+  content: "\f299"; }
 
-        var _ = this,
-            $imgsToLoad = $( 'img[data-lazy]', _.$slider ),
-            image,
-            imageSource,
-            imageSrcSet,
-            imageSizes,
-            imageToLoad;
+.fa-equals:before {
+  content: "\f52c"; }
 
-        if ( $imgsToLoad.length ) {
+.fa-eraser:before {
+  content: "\f12d"; }
 
-            image = $imgsToLoad.first();
-            imageSource = image.attr('data-lazy');
-            imageSrcSet = image.attr('data-srcset');
-            imageSizes  = image.attr('data-sizes') || _.$slider.attr('data-sizes');
-            imageToLoad = document.createElement('img');
+.fa-erlang:before {
+  content: "\f39d"; }
 
-            imageToLoad.onload = function() {
+.fa-ethereum:before {
+  content: "\f42e"; }
 
-                if (imageSrcSet) {
-                    image
-                        .attr('srcset', imageSrcSet );
+.fa-ethernet:before {
+  content: "\f796"; }
 
-                    if (imageSizes) {
-                        image
-                            .attr('sizes', imageSizes );
-                    }
-                }
+.fa-etsy:before {
+  content: "\f2d7"; }
 
-                image
-                    .attr( 'src', imageSource )
-                    .removeAttr('data-lazy data-srcset data-sizes')
-                    .removeClass('slick-loading');
+.fa-euro-sign:before {
+  content: "\f153"; }
 
-                if ( _.options.adaptiveHeight === true ) {
-                    _.setPosition();
-                }
+.fa-evernote:before {
+  content: "\f839"; }
 
-                _.$slider.trigger('lazyLoaded', [ _, image, imageSource ]);
-                _.progressiveLazyLoad();
+.fa-exchange-alt:before {
+  content: "\f362"; }
 
-            };
+.fa-exclamation:before {
+  content: "\f12a"; }
 
-            imageToLoad.onerror = function() {
+.fa-exclamation-circle:before {
+  content: "\f06a"; }
 
-                if ( tryCount < 3 ) {
+.fa-exclamation-triangle:before {
+  content: "\f071"; }
 
-                    /**
-                     * try to load the image 3 times,
-                     * leave a slight delay so we don't get
-                     * servers blocking the request.
-                     */
-                    setTimeout( function() {
-                        _.progressiveLazyLoad( tryCount + 1 );
-                    }, 500 );
+.fa-expand:before {
+  content: "\f065"; }
 
-                } else {
+.fa-expand-arrows-alt:before {
+  content: "\f31e"; }
 
-                    image
-                        .removeAttr( 'data-lazy' )
-                        .removeClass( 'slick-loading' )
-                        .addClass( 'slick-lazyload-error' );
+.fa-expeditedssl:before {
+  content: "\f23e"; }
 
-                    _.$slider.trigger('lazyLoadError', [ _, image, imageSource ]);
+.fa-external-link-alt:before {
+  content: "\f35d"; }
 
-                    _.progressiveLazyLoad();
+.fa-external-link-square-alt:before {
+  content: "\f360"; }
 
-                }
+.fa-eye:before {
+  content: "\f06e"; }
 
-            };
+.fa-eye-dropper:before {
+  content: "\f1fb"; }
 
-            imageToLoad.src = imageSource;
+.fa-eye-slash:before {
+  content: "\f070"; }
 
-        } else {
+.fa-facebook:before {
+  content: "\f09a"; }
 
-            _.$slider.trigger('allImagesLoaded', [ _ ]);
+.fa-facebook-f:before {
+  content: "\f39e"; }
 
-        }
+.fa-facebook-messenger:before {
+  content: "\f39f"; }
 
-    };
+.fa-facebook-square:before {
+  content: "\f082"; }
 
-    Slick.prototype.refresh = function( initializing ) {
+.fa-fantasy-flight-games:before {
+  content: "\f6dc"; }
 
-        var _ = this, currentSlide, lastVisibleIndex;
+.fa-fast-backward:before {
+  content: "\f049"; }
 
-        lastVisibleIndex = _.slideCount - _.options.slidesToShow;
+.fa-fast-forward:before {
+  content: "\f050"; }
 
-        // in non-infinite sliders, we don't want to go past the
-        // last visible index.
-        if( !_.options.infinite && ( _.currentSlide > lastVisibleIndex )) {
-            _.currentSlide = lastVisibleIndex;
-        }
+.fa-fax:before {
+  content: "\f1ac"; }
 
-        // if less slides than to show, go to start.
-        if ( _.slideCount <= _.options.slidesToShow ) {
-            _.currentSlide = 0;
+.fa-feather:before {
+  content: "\f52d"; }
 
-        }
+.fa-feather-alt:before {
+  content: "\f56b"; }
 
-        currentSlide = _.currentSlide;
+.fa-fedex:before {
+  content: "\f797"; }
 
-        _.destroy(true);
+.fa-fedora:before {
+  content: "\f798"; }
 
-        $.extend(_, _.initials, { currentSlide: currentSlide });
+.fa-female:before {
+  content: "\f182"; }
 
-        _.init();
+.fa-fighter-jet:before {
+  content: "\f0fb"; }
 
-        if( !initializing ) {
+.fa-figma:before {
+  content: "\f799"; }
 
-            _.changeSlide({
-                data: {
-                    message: 'index',
-                    index: currentSlide
-                }
-            }, false);
+.fa-file:before {
+  content: "\f15b"; }
 
-        }
+.fa-file-alt:before {
+  content: "\f15c"; }
 
-    };
+.fa-file-archive:before {
+  content: "\f1c6"; }
 
-    Slick.prototype.registerBreakpoints = function() {
+.fa-file-audio:before {
+  content: "\f1c7"; }
 
-        var _ = this, breakpoint, currentBreakpoint, l,
-            responsiveSettings = _.options.responsive || null;
+.fa-file-code:before {
+  content: "\f1c9"; }
 
-        if ( $.type(responsiveSettings) === 'array' && responsiveSettings.length ) {
+.fa-file-contract:before {
+  content: "\f56c"; }
 
-            _.respondTo = _.options.respondTo || 'window';
+.fa-file-csv:before {
+  content: "\f6dd"; }
 
-            for ( breakpoint in responsiveSettings ) {
+.fa-file-download:before {
+  content: "\f56d"; }
 
-                l = _.breakpoints.length-1;
+.fa-file-excel:before {
+  content: "\f1c3"; }
 
-                if (responsiveSettings.hasOwnProperty(breakpoint)) {
-                    currentBreakpoint = responsiveSettings[breakpoint].breakpoint;
+.fa-file-export:before {
+  content: "\f56e"; }
 
-                    // loop through the breakpoints and cut out any existing
-                    // ones with the same breakpoint number, we don't want dupes.
-                    while( l >= 0 ) {
-                        if( _.breakpoints[l] && _.breakpoints[l] === currentBreakpoint ) {
-                            _.breakpoints.splice(l,1);
-                        }
-                        l--;
-                    }
+.fa-file-image:before {
+  content: "\f1c5"; }
 
-                    _.breakpoints.push(currentBreakpoint);
-                    _.breakpointSettings[currentBreakpoint] = responsiveSettings[breakpoint].settings;
+.fa-file-import:before {
+  content: "\f56f"; }
 
-                }
+.fa-file-invoice:before {
+  content: "\f570"; }
 
-            }
+.fa-file-invoice-dollar:before {
+  content: "\f571"; }
 
-            _.breakpoints.sort(function(a, b) {
-                return ( _.options.mobileFirst ) ? a-b : b-a;
-            });
+.fa-file-medical:before {
+  content: "\f477"; }
 
-        }
+.fa-file-medical-alt:before {
+  content: "\f478"; }
 
-    };
+.fa-file-pdf:before {
+  content: "\f1c1"; }
 
-    Slick.prototype.reinit = function() {
+.fa-file-powerpoint:before {
+  content: "\f1c4"; }
 
-        var _ = this;
+.fa-file-prescription:before {
+  content: "\f572"; }
 
-        _.$slides =
-            _.$slideTrack
-                .children(_.options.slide)
-                .addClass('slick-slide');
+.fa-file-signature:before {
+  content: "\f573"; }
 
-        _.slideCount = _.$slides.length;
+.fa-file-upload:before {
+  content: "\f574"; }
 
-        if (_.currentSlide >= _.slideCount && _.currentSlide !== 0) {
-            _.currentSlide = _.currentSlide - _.options.slidesToScroll;
-        }
+.fa-file-video:before {
+  content: "\f1c8"; }
 
-        if (_.slideCount <= _.options.slidesToShow) {
-            _.currentSlide = 0;
-        }
+.fa-file-word:before {
+  content: "\f1c2"; }
 
-        _.registerBreakpoints();
+.fa-fill:before {
+  content: "\f575"; }
 
-        _.setProps();
-        _.setupInfinite();
-        _.buildArrows();
-        _.updateArrows();
-        _.initArrowEvents();
-        _.buildDots();
-        _.updateDots();
-        _.initDotEvents();
-        _.cleanUpSlideEvents();
-        _.initSlideEvents();
+.fa-fill-drip:before {
+  content: "\f576"; }
 
-        _.checkResponsive(false, true);
+.fa-film:before {
+  content: "\f008"; }
 
-        if (_.options.focusOnSelect === true) {
-            $(_.$slideTrack).children().on('click.slick', _.selectHandler);
-        }
+.fa-filter:before {
+  content: "\f0b0"; }
 
-        _.setSlideClasses(typeof _.currentSlide === 'number' ? _.currentSlide : 0);
+.fa-fingerprint:before {
+  content: "\f577"; }
 
-        _.setPosition();
-        _.focusHandler();
+.fa-fire:before {
+  content: "\f06d"; }
 
-        _.paused = !_.options.autoplay;
-        _.autoPlay();
+.fa-fire-alt:before {
+  content: "\f7e4"; }
 
-        _.$slider.trigger('reInit', [_]);
+.fa-fire-extinguisher:before {
+  content: "\f134"; }
 
-    };
+.fa-firefox:before {
+  content: "\f269"; }
 
-    Slick.prototype.resize = function() {
+.fa-first-aid:before {
+  content: "\f479"; }
 
-        var _ = this;
+.fa-first-order:before {
+  content: "\f2b0"; }
 
-        if ($(window).width() !== _.windowWidth) {
-            clearTimeout(_.windowDelay);
-            _.windowDelay = window.setTimeout(function() {
-                _.windowWidth = $(window).width();
-                _.checkResponsive();
-                if( !_.unslicked ) { _.setPosition(); }
-            }, 50);
-        }
-    };
+.fa-first-order-alt:before {
+  content: "\f50a"; }
 
-    Slick.prototype.removeSlide = Slick.prototype.slickRemove = function(index, removeBefore, removeAll) {
+.fa-firstdraft:before {
+  content: "\f3a1"; }
 
-        var _ = this;
+.fa-fish:before {
+  content: "\f578"; }
 
-        if (typeof(index) === 'boolean') {
-            removeBefore = index;
-            index = removeBefore === true ? 0 : _.slideCount - 1;
-        } else {
-            index = removeBefore === true ? --index : index;
-        }
+.fa-fist-raised:before {
+  content: "\f6de"; }
 
-        if (_.slideCount < 1 || index < 0 || index > _.slideCount - 1) {
-            return false;
-        }
+.fa-flag:before {
+  content: "\f024"; }
 
-        _.unload();
+.fa-flag-checkered:before {
+  content: "\f11e"; }
 
-        if (removeAll === true) {
-            _.$slideTrack.children().remove();
-        } else {
-            _.$slideTrack.children(this.options.slide).eq(index).remove();
-        }
+.fa-flag-usa:before {
+  content: "\f74d"; }
 
-        _.$slides = _.$slideTrack.children(this.options.slide);
+.fa-flask:before {
+  content: "\f0c3"; }
 
-        _.$slideTrack.children(this.options.slide).detach();
+.fa-flickr:before {
+  content: "\f16e"; }
 
-        _.$slideTrack.append(_.$slides);
+.fa-flipboard:before {
+  content: "\f44d"; }
 
-        _.$slidesCache = _.$slides;
+.fa-flushed:before {
+  content: "\f579"; }
 
-        _.reinit();
+.fa-fly:before {
+  content: "\f417"; }
 
-    };
+.fa-folder:before {
+  content: "\f07b"; }
 
-    Slick.prototype.setCSS = function(position) {
+.fa-folder-minus:before {
+  content: "\f65d"; }
 
-        var _ = this,
-            positionProps = {},
-            x, y;
+.fa-folder-open:before {
+  content: "\f07c"; }
 
-        if (_.options.rtl === true) {
-            position = -position;
-        }
-        x = _.positionProp == 'left' ? Math.ceil(position) + 'px' : '0px';
-        y = _.positionProp == 'top' ? Math.ceil(position) + 'px' : '0px';
+.fa-folder-plus:before {
+  content: "\f65e"; }
 
-        positionProps[_.positionProp] = position;
+.fa-font:before {
+  content: "\f031"; }
 
-        if (_.transformsEnabled === false) {
-            _.$slideTrack.css(positionProps);
-        } else {
-            positionProps = {};
-            if (_.cssTransitions === false) {
-                positionProps[_.animType] = 'translate(' + x + ', ' + y + ')';
-                _.$slideTrack.css(positionProps);
-            } else {
-                positionProps[_.animType] = 'translate3d(' + x + ', ' + y + ', 0px)';
-                _.$slideTrack.css(positionProps);
-            }
-        }
+.fa-font-awesome:before {
+  content: "\f2b4"; }
 
-    };
+.fa-font-awesome-alt:before {
+  content: "\f35c"; }
 
-    Slick.prototype.setDimensions = function() {
+.fa-font-awesome-flag:before {
+  content: "\f425"; }
 
-        var _ = this;
+.fa-font-awesome-logo-full:before {
+  content: "\f4e6"; }
 
-        if (_.options.vertical === false) {
-            if (_.options.centerMode === true) {
-                _.$list.css({
-                    padding: ('0px ' + _.options.centerPadding)
-                });
-            }
-        } else {
-            _.$list.height(_.$slides.first().outerHeight(true) * _.options.slidesToShow);
-            if (_.options.centerMode === true) {
-                _.$list.css({
-                    padding: (_.options.centerPadding + ' 0px')
-                });
-            }
-        }
+.fa-fonticons:before {
+  content: "\f280"; }
 
-        _.listWidth = _.$list.width();
-        _.listHeight = _.$list.height();
+.fa-fonticons-fi:before {
+  content: "\f3a2"; }
 
+.fa-football-ball:before {
+  content: "\f44e"; }
 
-        if (_.options.vertical === false && _.options.variableWidth === false) {
-            _.slideWidth = Math.ceil(_.listWidth / _.options.slidesToShow);
-            _.$slideTrack.width(Math.ceil((_.slideWidth * _.$slideTrack.children('.slick-slide').length)));
+.fa-fort-awesome:before {
+  content: "\f286"; }
 
-        } else if (_.options.variableWidth === true) {
-            _.$slideTrack.width(5000 * _.slideCount);
-        } else {
-            _.slideWidth = Math.ceil(_.listWidth);
-            _.$slideTrack.height(Math.ceil((_.$slides.first().outerHeight(true) * _.$slideTrack.children('.slick-slide').length)));
-        }
+.fa-fort-awesome-alt:before {
+  content: "\f3a3"; }
 
-        var offset = _.$slides.first().outerWidth(true) - _.$slides.first().width();
-        if (_.options.variableWidth === false) _.$slideTrack.children('.slick-slide').width(_.slideWidth - offset);
+.fa-forumbee:before {
+  content: "\f211"; }
 
-    };
+.fa-forward:before {
+  content: "\f04e"; }
 
-    Slick.prototype.setFade = function() {
+.fa-foursquare:before {
+  content: "\f180"; }
 
-        var _ = this,
-            targetLeft;
+.fa-free-code-camp:before {
+  content: "\f2c5"; }
 
-        _.$slides.each(function(index, element) {
-            targetLeft = (_.slideWidth * index) * -1;
-            if (_.options.rtl === true) {
-                $(element).css({
-                    position: 'relative',
-                    right: targetLeft,
-                    top: 0,
-                    zIndex: _.options.zIndex - 2,
-                    opacity: 0
-                });
-            } else {
-                $(element).css({
-                    position: 'relative',
-                    left: targetLeft,
-                    top: 0,
-                    zIndex: _.options.zIndex - 2,
-                    opacity: 0
-                });
-            }
-        });
+.fa-freebsd:before {
+  content: "\f3a4"; }
 
-        _.$slides.eq(_.currentSlide).css({
-            zIndex: _.options.zIndex - 1,
-            opacity: 1
-        });
+.fa-frog:before {
+  content: "\f52e"; }
 
-    };
+.fa-frown:before {
+  content: "\f119"; }
 
-    Slick.prototype.setHeight = function() {
+.fa-frown-open:before {
+  content: "\f57a"; }
 
-        var _ = this;
+.fa-fulcrum:before {
+  content: "\f50b"; }
 
-        if (_.options.slidesToShow === 1 && _.options.adaptiveHeight === true && _.options.vertical === false) {
-            var targetHeight = _.$slides.eq(_.currentSlide).outerHeight(true);
-            _.$list.css('height', targetHeight);
-        }
+.fa-funnel-dollar:before {
+  content: "\f662"; }
 
-    };
+.fa-futbol:before {
+  content: "\f1e3"; }
 
-    Slick.prototype.setOption =
-    Slick.prototype.slickSetOption = function() {
+.fa-galactic-republic:before {
+  content: "\f50c"; }
 
-        /**
-         * accepts arguments in format of:
-         *
-         *  - for changing a single option's value:
-         *     .slick("setOption", option, value, refresh )
-         *
-         *  - for changing a set of responsive options:
-         *     .slick("setOption", 'responsive', [{}, ...], refresh )
-         *
-         *  - for updating multiple values at once (not responsive)
-         *     .slick("setOption", { 'option': value, ... }, refresh )
-         */
+.fa-galactic-senate:before {
+  content: "\f50d"; }
 
-        var _ = this, l, item, option, value, refresh = false, type;
+.fa-gamepad:before {
+  content: "\f11b"; }
 
-        if( $.type( arguments[0] ) === 'object' ) {
+.fa-gas-pump:before {
+  content: "\f52f"; }
 
-            option =  arguments[0];
-            refresh = arguments[1];
-            type = 'multiple';
+.fa-gavel:before {
+  content: "\f0e3"; }
 
-        } else if ( $.type( arguments[0] ) === 'string' ) {
+.fa-gem:before {
+  content: "\f3a5"; }
 
-            option =  arguments[0];
-            value = arguments[1];
-            refresh = arguments[2];
+.fa-genderless:before {
+  content: "\f22d"; }
 
-            if ( arguments[0] === 'responsive' && $.type( arguments[1] ) === 'array' ) {
+.fa-get-pocket:before {
+  content: "\f265"; }
 
-                type = 'responsive';
+.fa-gg:before {
+  content: "\f260"; }
 
-            } else if ( typeof arguments[1] !== 'undefined' ) {
+.fa-gg-circle:before {
+  content: "\f261"; }
 
-                type = 'single';
+.fa-ghost:before {
+  content: "\f6e2"; }
 
-            }
+.fa-gift:before {
+  content: "\f06b"; }
 
-        }
+.fa-gifts:before {
+  content: "\f79c"; }
 
-        if ( type === 'single' ) {
+.fa-git:before {
+  content: "\f1d3"; }
 
-            _.options[option] = value;
+.fa-git-square:before {
+  content: "\f1d2"; }
 
+.fa-github:before {
+  content: "\f09b"; }
 
-        } else if ( type === 'multiple' ) {
+.fa-github-alt:before {
+  content: "\f113"; }
 
-            $.each( option , function( opt, val ) {
+.fa-github-square:before {
+  content: "\f092"; }
 
-                _.options[opt] = val;
+.fa-gitkraken:before {
+  content: "\f3a6"; }
 
-            });
+.fa-gitlab:before {
+  content: "\f296"; }
 
+.fa-gitter:before {
+  content: "\f426"; }
 
-        } else if ( type === 'responsive' ) {
+.fa-glass-cheers:before {
+  content: "\f79f"; }
 
-            for ( item in value ) {
+.fa-glass-martini:before {
+  content: "\f000"; }
 
-                if( $.type( _.options.responsive ) !== 'array' ) {
+.fa-glass-martini-alt:before {
+  content: "\f57b"; }
 
-                    _.options.responsive = [ value[item] ];
+.fa-glass-whiskey:before {
+  content: "\f7a0"; }
 
-                } else {
+.fa-glasses:before {
+  content: "\f530"; }
 
-                    l = _.options.responsive.length-1;
+.fa-glide:before {
+  content: "\f2a5"; }
 
-                    // loop through the responsive object and splice out duplicates.
-                    while( l >= 0 ) {
+.fa-glide-g:before {
+  content: "\f2a6"; }
 
-                        if( _.options.responsive[l].breakpoint === value[item].breakpoint ) {
+.fa-globe:before {
+  content: "\f0ac"; }
 
-                            _.options.responsive.splice(l,1);
+.fa-globe-africa:before {
+  content: "\f57c"; }
 
-                        }
+.fa-globe-americas:before {
+  content: "\f57d"; }
 
-                        l--;
+.fa-globe-asia:before {
+  content: "\f57e"; }
 
-                    }
+.fa-globe-europe:before {
+  content: "\f7a2"; }
 
-                    _.options.responsive.push( value[item] );
+.fa-gofore:before {
+  content: "\f3a7"; }
 
-                }
+.fa-golf-ball:before {
+  content: "\f450"; }
 
-            }
+.fa-goodreads:before {
+  content: "\f3a8"; }
 
-        }
+.fa-goodreads-g:before {
+  content: "\f3a9"; }
 
-        if ( refresh ) {
+.fa-google:before {
+  content: "\f1a0"; }
 
-            _.unload();
-            _.reinit();
+.fa-google-drive:before {
+  content: "\f3aa"; }
 
-        }
+.fa-google-play:before {
+  content: "\f3ab"; }
 
-    };
+.fa-google-plus:before {
+  content: "\f2b3"; }
 
-    Slick.prototype.setPosition = function() {
+.fa-google-plus-g:before {
+  content: "\f0d5"; }
 
-        var _ = this;
+.fa-google-plus-square:before {
+  content: "\f0d4"; }
 
-        _.setDimensions();
+.fa-google-wallet:before {
+  content: "\f1ee"; }
 
-        _.setHeight();
+.fa-gopuram:before {
+  content: "\f664"; }
 
-        if (_.options.fade === false) {
-            _.setCSS(_.getLeft(_.currentSlide));
-        } else {
-            _.setFade();
-        }
+.fa-graduation-cap:before {
+  content: "\f19d"; }
 
-        _.$slider.trigger('setPosition', [_]);
+.fa-gratipay:before {
+  content: "\f184"; }
 
-    };
+.fa-grav:before {
+  content: "\f2d6"; }
 
-    Slick.prototype.setProps = function() {
+.fa-greater-than:before {
+  content: "\f531"; }
 
-        var _ = this,
-            bodyStyle = document.body.style;
+.fa-greater-than-equal:before {
+  content: "\f532"; }
 
-        _.positionProp = _.options.vertical === true ? 'top' : 'left';
+.fa-grimace:before {
+  content: "\f57f"; }
 
-        if (_.positionProp === 'top') {
-            _.$slider.addClass('slick-vertical');
-        } else {
-            _.$slider.removeClass('slick-vertical');
-        }
+.fa-grin:before {
+  content: "\f580"; }
 
-        if (bodyStyle.WebkitTransition !== undefined ||
-            bodyStyle.MozTransition !== undefined ||
-            bodyStyle.msTransition !== undefined) {
-            if (_.options.useCSS === true) {
-                _.cssTransitions = true;
-            }
-        }
+.fa-grin-alt:before {
+  content: "\f581"; }
 
-        if ( _.options.fade ) {
-            if ( typeof _.options.zIndex === 'number' ) {
-                if( _.options.zIndex < 3 ) {
-                    _.options.zIndex = 3;
-                }
-            } else {
-                _.options.zIndex = _.defaults.zIndex;
-            }
-        }
+.fa-grin-beam:before {
+  content: "\f582"; }
 
-        if (bodyStyle.OTransform !== undefined) {
-            _.animType = 'OTransform';
-            _.transformType = '-o-transform';
-            _.transitionType = 'OTransition';
-            if (bodyStyle.perspectiveProperty === undefined && bodyStyle.webkitPerspective === undefined) _.animType = false;
-        }
-        if (bodyStyle.MozTransform !== undefined) {
-            _.animType = 'MozTransform';
-            _.transformType = '-moz-transform';
-            _.transitionType = 'MozTransition';
-            if (bodyStyle.perspectiveProperty === undefined && bodyStyle.MozPerspective === undefined) _.animType = false;
-        }
-        if (bodyStyle.webkitTransform !== undefined) {
-            _.animType = 'webkitTransform';
-            _.transformType = '-webkit-transform';
-            _.transitionType = 'webkitTransition';
-            if (bodyStyle.perspectiveProperty === undefined && bodyStyle.webkitPerspective === undefined) _.animType = false;
-        }
-        if (bodyStyle.msTransform !== undefined) {
-            _.animType = 'msTransform';
-            _.transformType = '-ms-transform';
-            _.transitionType = 'msTransition';
-            if (bodyStyle.msTransform === undefined) _.animType = false;
-        }
-        if (bodyStyle.transform !== undefined && _.animType !== false) {
-            _.animType = 'transform';
-            _.transformType = 'transform';
-            _.transitionType = 'transition';
-        }
-        _.transformsEnabled = _.options.useTransform && (_.animType !== null && _.animType !== false);
-    };
+.fa-grin-beam-sweat:before {
+  content: "\f583"; }
 
+.fa-grin-hearts:before {
+  content: "\f584"; }
 
-    Slick.prototype.setSlideClasses = function(index) {
+.fa-grin-squint:before {
+  content: "\f585"; }
 
-        var _ = this,
-            centerOffset, allSlides, indexOffset, remainder;
+.fa-grin-squint-tears:before {
+  content: "\f586"; }
 
-        allSlides = _.$slider
-            .find('.slick-slide')
-            .removeClass('slick-active slick-center slick-current')
-            .attr('aria-hidden', 'true');
+.fa-grin-stars:before {
+  content: "\f587"; }
 
-        _.$slides
-            .eq(index)
-            .addClass('slick-current');
+.fa-grin-tears:before {
+  content: "\f588"; }
 
-        if (_.options.centerMode === true) {
+.fa-grin-tongue:before {
+  content: "\f589"; }
 
-            var evenCoef = _.options.slidesToShow % 2 === 0 ? 1 : 0;
+.fa-grin-tongue-squint:before {
+  content: "\f58a"; }
 
-            centerOffset = Math.floor(_.options.slidesToShow / 2);
+.fa-grin-tongue-wink:before {
+  content: "\f58b"; }
 
-            if (_.options.infinite === true) {
+.fa-grin-wink:before {
+  content: "\f58c"; }
 
-                if (index >= centerOffset && index <= (_.slideCount - 1) - centerOffset) {
-                    _.$slides
-                        .slice(index - centerOffset + evenCoef, index + centerOffset + 1)
-                        .addClass('slick-active')
-                        .attr('aria-hidden', 'false');
+.fa-grip-horizontal:before {
+  content: "\f58d"; }
 
-                } else {
+.fa-grip-lines:before {
+  content: "\f7a4"; }
 
-                    indexOffset = _.options.slidesToShow + index;
-                    allSlides
-                        .slice(indexOffset - centerOffset + 1 + evenCoef, indexOffset + centerOffset + 2)
-                        .addClass('slick-active')
-                        .attr('aria-hidden', 'false');
+.fa-grip-lines-vertical:before {
+  content: "\f7a5"; }
 
-                }
+.fa-grip-vertical:before {
+  content: "\f58e"; }
 
-                if (index === 0) {
+.fa-gripfire:before {
+  content: "\f3ac"; }
 
-                    allSlides
-                        .eq(allSlides.length - 1 - _.options.slidesToShow)
-                        .addClass('slick-center');
+.fa-grunt:before {
+  content: "\f3ad"; }
 
-                } else if (index === _.slideCount - 1) {
+.fa-guitar:before {
+  content: "\f7a6"; }
 
-                    allSlides
-                        .eq(_.options.slidesToShow)
-                        .addClass('slick-center');
+.fa-gulp:before {
+  content: "\f3ae"; }
 
-                }
+.fa-h-square:before {
+  content: "\f0fd"; }
 
-            }
+.fa-hacker-news:before {
+  content: "\f1d4"; }
 
-            _.$slides
-                .eq(index)
-                .addClass('slick-center');
+.fa-hacker-news-square:before {
+  content: "\f3af"; }
 
-        } else {
+.fa-hackerrank:before {
+  content: "\f5f7"; }
 
-            if (index >= 0 && index <= (_.slideCount - _.options.slidesToShow)) {
+.fa-hamburger:before {
+  content: "\f805"; }
 
-                _.$slides
-                    .slice(index, index + _.options.slidesToShow)
-                    .addClass('slick-active')
-                    .attr('aria-hidden', 'false');
+.fa-hammer:before {
+  content: "\f6e3"; }
 
-            } else if (allSlides.length <= _.options.slidesToShow) {
+.fa-hamsa:before {
+  content: "\f665"; }
 
-                allSlides
-                    .addClass('slick-active')
-                    .attr('aria-hidden', 'false');
+.fa-hand-holding:before {
+  content: "\f4bd"; }
 
-            } else {
+.fa-hand-holding-heart:before {
+  content: "\f4be"; }
 
-                remainder = _.slideCount % _.options.slidesToShow;
-                indexOffset = _.options.infinite === true ? _.options.slidesToShow + index : index;
+.fa-hand-holding-usd:before {
+  content: "\f4c0"; }
 
-                if (_.options.slidesToShow == _.options.slidesToScroll && (_.slideCount - index) < _.options.slidesToShow) {
+.fa-hand-lizard:before {
+  content: "\f258"; }
 
-                    allSlides
-                        .slice(indexOffset - (_.options.slidesToShow - remainder), indexOffset + remainder)
-                        .addClass('slick-active')
-                        .attr('aria-hidden', 'false');
+.fa-hand-middle-finger:before {
+  content: "\f806"; }
 
-                } else {
+.fa-hand-paper:before {
+  content: "\f256"; }
 
-                    allSlides
-                        .slice(indexOffset, indexOffset + _.options.slidesToShow)
-                        .addClass('slick-active')
-                        .attr('aria-hidden', 'false');
+.fa-hand-peace:before {
+  content: "\f25b"; }
 
-                }
+.fa-hand-point-down:before {
+  content: "\f0a7"; }
 
-            }
+.fa-hand-point-left:before {
+  content: "\f0a5"; }
 
-        }
+.fa-hand-point-right:before {
+  content: "\f0a4"; }
 
-        if (_.options.lazyLoad === 'ondemand' || _.options.lazyLoad === 'anticipated') {
-            _.lazyLoad();
-        }
-    };
+.fa-hand-point-up:before {
+  content: "\f0a6"; }
 
-    Slick.prototype.setupInfinite = function() {
+.fa-hand-pointer:before {
+  content: "\f25a"; }
 
-        var _ = this,
-            i, slideIndex, infiniteCount;
+.fa-hand-rock:before {
+  content: "\f255"; }
 
-        if (_.options.fade === true) {
-            _.options.centerMode = false;
-        }
+.fa-hand-scissors:before {
+  content: "\f257"; }
 
-        if (_.options.infinite === true && _.options.fade === false) {
+.fa-hand-spock:before {
+  content: "\f259"; }
 
-            slideIndex = null;
+.fa-hands:before {
+  content: "\f4c2"; }
 
-            if (_.slideCount > _.options.slidesToShow) {
+.fa-hands-helping:before {
+  content: "\f4c4"; }
 
-                if (_.options.centerMode === true) {
-                    infiniteCount = _.options.slidesToShow + 1;
-                } else {
-                    infiniteCount = _.options.slidesToShow;
-                }
+.fa-handshake:before {
+  content: "\f2b5"; }
 
-                for (i = _.slideCount; i > (_.slideCount -
-                        infiniteCount); i -= 1) {
-                    slideIndex = i - 1;
-                    $(_.$slides[slideIndex]).clone(true).attr('id', '')
-                        .attr('data-slick-index', slideIndex - _.slideCount)
-                        .prependTo(_.$slideTrack).addClass('slick-cloned');
-                }
-                for (i = 0; i < infiniteCount  + _.slideCount; i += 1) {
-                    slideIndex = i;
-                    $(_.$slides[slideIndex]).clone(true).attr('id', '')
-                        .attr('data-slick-index', slideIndex + _.slideCount)
-                        .appendTo(_.$slideTrack).addClass('slick-cloned');
-                }
-                _.$slideTrack.find('.slick-cloned').find('[id]').each(function() {
-                    $(this).attr('id', '');
-                });
+.fa-hanukiah:before {
+  content: "\f6e6"; }
 
-            }
+.fa-hard-hat:before {
+  content: "\f807"; }
 
-        }
+.fa-hashtag:before {
+  content: "\f292"; }
 
-    };
+.fa-hat-wizard:before {
+  content: "\f6e8"; }
 
-    Slick.prototype.interrupt = function( toggle ) {
+.fa-haykal:before {
+  content: "\f666"; }
 
-        var _ = this;
+.fa-hdd:before {
+  content: "\f0a0"; }
 
-        if( !toggle ) {
-            _.autoPlay();
-        }
-        _.interrupted = toggle;
+.fa-heading:before {
+  content: "\f1dc"; }
 
-    };
+.fa-headphones:before {
+  content: "\f025"; }
 
-    Slick.prototype.selectHandler = function(event) {
+.fa-headphones-alt:before {
+  content: "\f58f"; }
 
-        var _ = this;
+.fa-headset:before {
+  content: "\f590"; }
 
-        var targetElement =
-            $(event.target).is('.slick-slide') ?
-                $(event.target) :
-                $(event.target).parents('.slick-slide');
+.fa-heart:before {
+  content: "\f004"; }
 
-        var index = parseInt(targetElement.attr('data-slick-index'));
+.fa-heart-broken:before {
+  content: "\f7a9"; }
 
-        if (!index) index = 0;
+.fa-heartbeat:before {
+  content: "\f21e"; }
 
-        if (_.slideCount <= _.options.slidesToShow) {
+.fa-helicopter:before {
+  content: "\f533"; }
 
-            _.slideHandler(index, false, true);
-            return;
+.fa-highlighter:before {
+  content: "\f591"; }
 
-        }
+.fa-hiking:before {
+  content: "\f6ec"; }
 
-        _.slideHandler(index);
+.fa-hippo:before {
+  content: "\f6ed"; }
 
-    };
+.fa-hips:before {
+  content: "\f452"; }
 
-    Slick.prototype.slideHandler = function(index, sync, dontAnimate) {
+.fa-hire-a-helper:before {
+  content: "\f3b0"; }
 
-        var targetSlide, animSlide, oldSlide, slideLeft, targetLeft = null,
-            _ = this, navTarget;
+.fa-history:before {
+  content: "\f1da"; }
 
-        sync = sync || false;
+.fa-hockey-puck:before {
+  content: "\f453"; }
 
-        if (_.animating === true && _.options.waitForAnimate === true) {
-            return;
-        }
+.fa-holly-berry:before {
+  content: "\f7aa"; }
 
-        if (_.options.fade === true && _.currentSlide === index) {
-            return;
-        }
+.fa-home:before {
+  content: "\f015"; }
 
-        if (sync === false) {
-            _.asNavFor(index);
-        }
+.fa-hooli:before {
+  content: "\f427"; }
 
-        targetSlide = index;
-        targetLeft = _.getLeft(targetSlide);
-        slideLeft = _.getLeft(_.currentSlide);
+.fa-hornbill:before {
+  content: "\f592"; }
 
-        _.currentLeft = _.swipeLeft === null ? slideLeft : _.swipeLeft;
+.fa-horse:before {
+  content: "\f6f0"; }
 
-        if (_.options.infinite === false && _.options.centerMode === false && (index < 0 || index > _.getDotCount() * _.options.slidesToScroll)) {
-            if (_.options.fade === false) {
-                targetSlide = _.currentSlide;
-                if (dontAnimate !== true && _.slideCount > _.options.slidesToShow) {
-                    _.animateSlide(slideLeft, function() {
-                        _.postSlide(targetSlide);
-                    });
-                } else {
-                    _.postSlide(targetSlide);
-                }
-            }
-            return;
-        } else if (_.options.infinite === false && _.options.centerMode === true && (index < 0 || index > (_.slideCount - _.options.slidesToScroll))) {
-            if (_.options.fade === false) {
-                targetSlide = _.currentSlide;
-                if (dontAnimate !== true && _.slideCount > _.options.slidesToShow) {
-                    _.animateSlide(slideLeft, function() {
-                        _.postSlide(targetSlide);
-                    });
-                } else {
-                    _.postSlide(targetSlide);
-                }
-            }
-            return;
-        }
+.fa-horse-head:before {
+  content: "\f7ab"; }
 
-        if ( _.options.autoplay ) {
-            clearInterval(_.autoPlayTimer);
-        }
+.fa-hospital:before {
+  content: "\f0f8"; }
 
-        if (targetSlide < 0) {
-            if (_.slideCount % _.options.slidesToScroll !== 0) {
-                animSlide = _.slideCount - (_.slideCount % _.options.slidesToScroll);
-            } else {
-                animSlide = _.slideCount + targetSlide;
-            }
-        } else if (targetSlide >= _.slideCount) {
-            if (_.slideCount % _.options.slidesToScroll !== 0) {
-                animSlide = 0;
-            } else {
-                animSlide = targetSlide - _.slideCount;
-            }
-        } else {
-            animSlide = targetSlide;
-        }
+.fa-hospital-alt:before {
+  content: "\f47d"; }
 
-        _.animating = true;
+.fa-hospital-symbol:before {
+  content: "\f47e"; }
 
-        _.$slider.trigger('beforeChange', [_, _.currentSlide, animSlide]);
+.fa-hot-tub:before {
+  content: "\f593"; }
 
-        oldSlide = _.currentSlide;
-        _.currentSlide = animSlide;
+.fa-hotdog:before {
+  content: "\f80f"; }
 
-        _.setSlideClasses(_.currentSlide);
+.fa-hotel:before {
+  content: "\f594"; }
 
-        if ( _.options.asNavFor ) {
+.fa-hotjar:before {
+  content: "\f3b1"; }
 
-            navTarget = _.getNavTarget();
-            navTarget = navTarget.slick('getSlick');
+.fa-hourglass:before {
+  content: "\f254"; }
 
-            if ( navTarget.slideCount <= navTarget.options.slidesToShow ) {
-                navTarget.setSlideClasses(_.currentSlide);
-            }
+.fa-hourglass-end:before {
+  content: "\f253"; }
 
-        }
+.fa-hourglass-half:before {
+  content: "\f252"; }
 
-        _.updateDots();
-        _.updateArrows();
+.fa-hourglass-start:before {
+  content: "\f251"; }
 
-        if (_.options.fade === true) {
-            if (dontAnimate !== true) {
+.fa-house-damage:before {
+  content: "\f6f1"; }
 
-                _.fadeSlideOut(oldSlide);
+.fa-houzz:before {
+  content: "\f27c"; }
 
-                _.fadeSlide(animSlide, function() {
-                    _.postSlide(animSlide);
-                });
+.fa-hryvnia:before {
+  content: "\f6f2"; }
 
-            } else {
-                _.postSlide(animSlide);
-            }
-            _.animateHeight();
-            return;
-        }
+.fa-html5:before {
+  content: "\f13b"; }
 
-        if (dontAnimate !== true && _.slideCount > _.options.slidesToShow) {
-            _.animateSlide(targetLeft, function() {
-                _.postSlide(animSlide);
-            });
-        } else {
-            _.postSlide(animSlide);
-        }
+.fa-hubspot:before {
+  content: "\f3b2"; }
 
-    };
+.fa-i-cursor:before {
+  content: "\f246"; }
 
-    Slick.prototype.startLoad = function() {
+.fa-ice-cream:before {
+  content: "\f810"; }
 
-        var _ = this;
+.fa-icicles:before {
+  content: "\f7ad"; }
 
-        if (_.options.arrows === true && _.slideCount > _.options.slidesToShow) {
+.fa-id-badge:before {
+  content: "\f2c1"; }
 
-            _.$prevArrow.hide();
-            _.$nextArrow.hide();
+.fa-id-card:before {
+  content: "\f2c2"; }
 
-        }
+.fa-id-card-alt:before {
+  content: "\f47f"; }
 
-        if (_.options.dots === true && _.slideCount > _.options.slidesToShow) {
+.fa-igloo:before {
+  content: "\f7ae"; }
 
-            _.$dots.hide();
+.fa-image:before {
+  content: "\f03e"; }
 
-        }
+.fa-images:before {
+  content: "\f302"; }
 
-        _.$slider.addClass('slick-loading');
+.fa-imdb:before {
+  content: "\f2d8"; }
 
-    };
+.fa-inbox:before {
+  content: "\f01c"; }
 
-    Slick.prototype.swipeDirection = function() {
+.fa-indent:before {
+  content: "\f03c"; }
 
-        var xDist, yDist, r, swipeAngle, _ = this;
+.fa-industry:before {
+  content: "\f275"; }
 
-        xDist = _.touchObject.startX - _.touchObject.curX;
-        yDist = _.touchObject.startY - _.touchObject.curY;
-        r = Math.atan2(yDist, xDist);
+.fa-infinity:before {
+  content: "\f534"; }
 
-        swipeAngle = Math.round(r * 180 / Math.PI);
-        if (swipeAngle < 0) {
-            swipeAngle = 360 - Math.abs(swipeAngle);
-        }
+.fa-info:before {
+  content: "\f129"; }
 
-        if ((swipeAngle <= 45) && (swipeAngle >= 0)) {
-            return (_.options.rtl === false ? 'left' : 'right');
-        }
-        if ((swipeAngle <= 360) && (swipeAngle >= 315)) {
-            return (_.options.rtl === false ? 'left' : 'right');
-        }
-        if ((swipeAngle >= 135) && (swipeAngle <= 225)) {
-            return (_.options.rtl === false ? 'right' : 'left');
-        }
-        if (_.options.verticalSwiping === true) {
-            if ((swipeAngle >= 35) && (swipeAngle <= 135)) {
-                return 'down';
-            } else {
-                return 'up';
-            }
-        }
+.fa-info-circle:before {
+  content: "\f05a"; }
 
-        return 'vertical';
+.fa-instagram:before {
+  content: "\f16d"; }
 
-    };
+.fa-intercom:before {
+  content: "\f7af"; }
 
-    Slick.prototype.swipeEnd = function(event) {
+.fa-internet-explorer:before {
+  content: "\f26b"; }
 
-        var _ = this,
-            slideCount,
-            direction;
+.fa-invision:before {
+  content: "\f7b0"; }
 
-        _.dragging = false;
-        _.swiping = false;
+.fa-ioxhost:before {
+  content: "\f208"; }
 
-        if (_.scrolling) {
-            _.scrolling = false;
-            return false;
-        }
+.fa-italic:before {
+  content: "\f033"; }
 
-        _.interrupted = false;
-        _.shouldClick = ( _.touchObject.swipeLength > 10 ) ? false : true;
+.fa-itch-io:before {
+  content: "\f83a"; }
 
-        if ( _.touchObject.curX === undefined ) {
-            return false;
-        }
+.fa-itunes:before {
+  content: "\f3b4"; }
 
-        if ( _.touchObject.edgeHit === true ) {
-            _.$slider.trigger('edge', [_, _.swipeDirection() ]);
-        }
+.fa-itunes-note:before {
+  content: "\f3b5"; }
 
-        if ( _.touchObject.swipeLength >= _.touchObject.minSwipe ) {
+.fa-java:before {
+  content: "\f4e4"; }
 
-            direction = _.swipeDirection();
+.fa-jedi:before {
+  content: "\f669"; }
 
-            switch ( direction ) {
+.fa-jedi-order:before {
+  content: "\f50e"; }
 
-                case 'left':
-                case 'down':
+.fa-jenkins:before {
+  content: "\f3b6"; }
 
-                    slideCount =
-                        _.options.swipeToSlide ?
-                            _.checkNavigable( _.currentSlide + _.getSlideCount() ) :
-                            _.currentSlide + _.getSlideCount();
+.fa-jira:before {
+  content: "\f7b1"; }
 
-                    _.currentDirection = 0;
+.fa-joget:before {
+  content: "\f3b7"; }
 
-                    break;
+.fa-joint:before {
+  content: "\f595"; }
 
-                case 'right':
-                case 'up':
+.fa-joomla:before {
+  content: "\f1aa"; }
 
-                    slideCount =
-                        _.options.swipeToSlide ?
-                            _.checkNavigable( _.currentSlide - _.getSlideCount() ) :
-                            _.currentSlide - _.getSlideCount();
+.fa-journal-whills:before {
+  content: "\f66a"; }
 
-                    _.currentDirection = 1;
+.fa-js:before {
+  content: "\f3b8"; }
 
-                    break;
+.fa-js-square:before {
+  content: "\f3b9"; }
 
-                default:
+.fa-jsfiddle:before {
+  content: "\f1cc"; }
 
+.fa-kaaba:before {
+  content: "\f66b"; }
 
-            }
+.fa-kaggle:before {
+  content: "\f5fa"; }
 
-            if( direction != 'vertical' ) {
+.fa-key:before {
+  content: "\f084"; }
 
-                _.slideHandler( slideCount );
-                _.touchObject = {};
-                _.$slider.trigger('swipe', [_, direction ]);
+.fa-keybase:before {
+  content: "\f4f5"; }
 
-            }
+.fa-keyboard:before {
+  content: "\f11c"; }
 
-        } else {
+.fa-keycdn:before {
+  content: "\f3ba"; }
 
-            if ( _.touchObject.startX !== _.touchObject.curX ) {
+.fa-khanda:before {
+  content: "\f66d"; }
 
-                _.slideHandler( _.currentSlide );
-                _.touchObject = {};
+.fa-kickstarter:before {
+  content: "\f3bb"; }
 
-            }
+.fa-kickstarter-k:before {
+  content: "\f3bc"; }
 
-        }
+.fa-kiss:before {
+  content: "\f596"; }
 
-    };
+.fa-kiss-beam:before {
+  content: "\f597"; }
 
-    Slick.prototype.swipeHandler = function(event) {
+.fa-kiss-wink-heart:before {
+  content: "\f598"; }
 
-        var _ = this;
+.fa-kiwi-bird:before {
+  content: "\f535"; }
 
-        if ((_.options.swipe === false) || ('ontouchend' in document && _.options.swipe === false)) {
-            return;
-        } else if (_.options.draggable === false && event.type.indexOf('mouse') !== -1) {
-            return;
-        }
+.fa-korvue:before {
+  content: "\f42f"; }
 
-        _.touchObject.fingerCount = event.originalEvent && event.originalEvent.touches !== undefined ?
-            event.originalEvent.touches.length : 1;
+.fa-landmark:before {
+  content: "\f66f"; }
 
-        _.touchObject.minSwipe = _.listWidth / _.options
-            .touchThreshold;
+.fa-language:before {
+  content: "\f1ab"; }
 
-        if (_.options.verticalSwiping === true) {
-            _.touchObject.minSwipe = _.listHeight / _.options
-                .touchThreshold;
-        }
+.fa-laptop:before {
+  content: "\f109"; }
 
-        switch (event.data.action) {
+.fa-laptop-code:before {
+  content: "\f5fc"; }
 
-            case 'start':
-                _.swipeStart(event);
-                break;
+.fa-laptop-medical:before {
+  content: "\f812"; }
 
-            case 'move':
-                _.swipeMove(event);
-                break;
+.fa-laravel:before {
+  content: "\f3bd"; }
 
-            case 'end':
-                _.swipeEnd(event);
-                break;
+.fa-lastfm:before {
+  content: "\f202"; }
 
-        }
+.fa-lastfm-square:before {
+  content: "\f203"; }
 
-    };
+.fa-laugh:before {
+  content: "\f599"; }
 
-    Slick.prototype.swipeMove = function(event) {
+.fa-laugh-beam:before {
+  content: "\f59a"; }
 
-        var _ = this,
-            edgeWasHit = false,
-            curLeft, swipeDirection, swipeLength, positionOffset, touches, verticalSwipeLength;
+.fa-laugh-squint:before {
+  content: "\f59b"; }
 
-        touches = event.originalEvent !== undefined ? event.originalEvent.touches : null;
+.fa-laugh-wink:before {
+  content: "\f59c"; }
 
-        if (!_.dragging || _.scrolling || touches && touches.length !== 1) {
-            return false;
-        }
+.fa-layer-group:before {
+  content: "\f5fd"; }
 
-        curLeft = _.getLeft(_.currentSlide);
+.fa-leaf:before {
+  content: "\f06c"; }
 
-        _.touchObject.curX = touches !== undefined ? touches[0].pageX : event.clientX;
-        _.touchObject.curY = touches !== undefined ? touches[0].pageY : event.clientY;
+.fa-leanpub:before {
+  content: "\f212"; }
 
-        _.touchObject.swipeLength = Math.round(Math.sqrt(
-            Math.pow(_.touchObject.curX - _.touchObject.startX, 2)));
+.fa-lemon:before {
+  content: "\f094"; }
 
-        verticalSwipeLength = Math.round(Math.sqrt(
-            Math.pow(_.touchObject.curY - _.touchObject.startY, 2)));
+.fa-less:before {
+  content: "\f41d"; }
 
-        if (!_.options.verticalSwiping && !_.swiping && verticalSwipeLength > 4) {
-            _.scrolling = true;
-            return false;
-        }
+.fa-less-than:before {
+  content: "\f536"; }
 
-        if (_.options.verticalSwiping === true) {
-            _.touchObject.swipeLength = verticalSwipeLength;
-        }
+.fa-less-than-equal:before {
+  content: "\f537"; }
 
-        swipeDirection = _.swipeDirection();
+.fa-level-down-alt:before {
+  content: "\f3be"; }
 
-        if (event.originalEvent !== undefined && _.touchObject.swipeLength > 4) {
-            _.swiping = true;
-            event.preventDefault();
-        }
+.fa-level-up-alt:before {
+  content: "\f3bf"; }
 
-        positionOffset = (_.options.rtl === false ? 1 : -1) * (_.touchObject.curX > _.touchObject.startX ? 1 : -1);
-        if (_.options.verticalSwiping === true) {
-            positionOffset = _.touchObject.curY > _.touchObject.startY ? 1 : -1;
-        }
+.fa-life-ring:before {
+  content: "\f1cd"; }
 
+.fa-lightbulb:before {
+  content: "\f0eb"; }
 
-        swipeLength = _.touchObject.swipeLength;
+.fa-line:before {
+  content: "\f3c0"; }
 
-        _.touchObject.edgeHit = false;
+.fa-link:before {
+  content: "\f0c1"; }
 
-        if (_.options.infinite === false) {
-            if ((_.currentSlide === 0 && swipeDirection === 'right') || (_.currentSlide >= _.getDotCount() && swipeDirection === 'left')) {
-                swipeLength = _.touchObject.swipeLength * _.options.edgeFriction;
-                _.touchObject.edgeHit = true;
-            }
-        }
+.fa-linkedin:before {
+  content: "\f08c"; }
 
-        if (_.options.vertical === false) {
-            _.swipeLeft = curLeft + swipeLength * positionOffset;
-        } else {
-            _.swipeLeft = curLeft + (swipeLength * (_.$list.height() / _.listWidth)) * positionOffset;
-        }
-        if (_.options.verticalSwiping === true) {
-            _.swipeLeft = curLeft + swipeLength * positionOffset;
-        }
+.fa-linkedin-in:before {
+  content: "\f0e1"; }
 
-        if (_.options.fade === true || _.options.touchMove === false) {
-            return false;
-        }
+.fa-linode:before {
+  content: "\f2b8"; }
 
-        if (_.animating === true) {
-            _.swipeLeft = null;
-            return false;
-        }
+.fa-linux:before {
+  content: "\f17c"; }
 
-        _.setCSS(_.swipeLeft);
+.fa-lira-sign:before {
+  content: "\f195"; }
 
-    };
+.fa-list:before {
+  content: "\f03a"; }
 
-    Slick.prototype.swipeStart = function(event) {
+.fa-list-alt:before {
+  content: "\f022"; }
 
-        var _ = this,
-            touches;
+.fa-list-ol:before {
+  content: "\f0cb"; }
 
-        _.interrupted = true;
+.fa-list-ul:before {
+  content: "\f0ca"; }
 
-        if (_.touchObject.fingerCount !== 1 || _.slideCount <= _.options.slidesToShow) {
-            _.touchObject = {};
-            return false;
-        }
+.fa-location-arrow:before {
+  content: "\f124"; }
 
-        if (event.originalEvent !== undefined && event.originalEvent.touches !== undefined) {
-            touches = event.originalEvent.touches[0];
-        }
+.fa-lock:before {
+  content: "\f023"; }
 
-        _.touchObject.startX = _.touchObject.curX = touches !== undefined ? touches.pageX : event.clientX;
-        _.touchObject.startY = _.touchObject.curY = touches !== undefined ? touches.pageY : event.clientY;
+.fa-lock-open:before {
+  content: "\f3c1"; }
 
-        _.dragging = true;
+.fa-long-arrow-alt-down:before {
+  content: "\f309"; }
 
-    };
+.fa-long-arrow-alt-left:before {
+  content: "\f30a"; }
 
-    Slick.prototype.unfilterSlides = Slick.prototype.slickUnfilter = function() {
+.fa-long-arrow-alt-right:before {
+  content: "\f30b"; }
 
-        var _ = this;
+.fa-long-arrow-alt-up:before {
+  content: "\f30c"; }
 
-        if (_.$slidesCache !== null) {
+.fa-low-vision:before {
+  content: "\f2a8"; }
 
-            _.unload();
+.fa-luggage-cart:before {
+  content: "\f59d"; }
 
-            _.$slideTrack.children(this.options.slide).detach();
+.fa-lyft:before {
+  content: "\f3c3"; }
 
-            _.$slidesCache.appendTo(_.$slideTrack);
+.fa-magento:before {
+  content: "\f3c4"; }
 
-            _.reinit();
+.fa-magic:before {
+  content: "\f0d0"; }
 
-        }
+.fa-magnet:before {
+  content: "\f076"; }
 
-    };
+.fa-mail-bulk:before {
+  content: "\f674"; }
 
-    Slick.prototype.unload = function() {
+.fa-mailchimp:before {
+  content: "\f59e"; }
 
-        var _ = this;
+.fa-male:before {
+  content: "\f183"; }
 
-        $('.slick-cloned', _.$slider).remove();
+.fa-mandalorian:before {
+  content: "\f50f"; }
 
-        if (_.$dots) {
-            _.$dots.remove();
-        }
+.fa-map:before {
+  content: "\f279"; }
 
-        if (_.$prevArrow && _.htmlExpr.test(_.options.prevArrow)) {
-            _.$prevArrow.remove();
-        }
+.fa-map-marked:before {
+  content: "\f59f"; }
 
-        if (_.$nextArrow && _.htmlExpr.test(_.options.nextArrow)) {
-            _.$nextArrow.remove();
-        }
+.fa-map-marked-alt:before {
+  content: "\f5a0"; }
 
-        _.$slides
-            .removeClass('slick-slide slick-active slick-visible slick-current')
-            .attr('aria-hidden', 'true')
-            .css('width', '');
+.fa-map-marker:before {
+  content: "\f041"; }
 
-    };
+.fa-map-marker-alt:before {
+  content: "\f3c5"; }
 
-    Slick.prototype.unslick = function(fromBreakpoint) {
+.fa-map-pin:before {
+  content: "\f276"; }
 
-        var _ = this;
-        _.$slider.trigger('unslick', [_, fromBreakpoint]);
-        _.destroy();
+.fa-map-signs:before {
+  content: "\f277"; }
 
-    };
+.fa-markdown:before {
+  content: "\f60f"; }
 
-    Slick.prototype.updateArrows = function() {
+.fa-marker:before {
+  content: "\f5a1"; }
 
-        var _ = this,
-            centerOffset;
+.fa-mars:before {
+  content: "\f222"; }
 
-        centerOffset = Math.floor(_.options.slidesToShow / 2);
+.fa-mars-double:before {
+  content: "\f227"; }
 
-        if ( _.options.arrows === true &&
-            _.slideCount > _.options.slidesToShow &&
-            !_.options.infinite ) {
+.fa-mars-stroke:before {
+  content: "\f229"; }
 
-            _.$prevArrow.removeClass('slick-disabled').attr('aria-disabled', 'false');
-            _.$nextArrow.removeClass('slick-disabled').attr('aria-disabled', 'false');
+.fa-mars-stroke-h:before {
+  content: "\f22b"; }
 
-            if (_.currentSlide === 0) {
+.fa-mars-stroke-v:before {
+  content: "\f22a"; }
 
-                _.$prevArrow.addClass('slick-disabled').attr('aria-disabled', 'true');
-                _.$nextArrow.removeClass('slick-disabled').attr('aria-disabled', 'false');
+.fa-mask:before {
+  content: "\f6fa"; }
 
-            } else if (_.currentSlide >= _.slideCount - _.options.slidesToShow && _.options.centerMode === false) {
+.fa-mastodon:before {
+  content: "\f4f6"; }
 
-                _.$nextArrow.addClass('slick-disabled').attr('aria-disabled', 'true');
-                _.$prevArrow.removeClass('slick-disabled').attr('aria-disabled', 'false');
+.fa-maxcdn:before {
+  content: "\f136"; }
 
-            } else if (_.currentSlide >= _.slideCount - 1 && _.options.centerMode === true) {
+.fa-medal:before {
+  content: "\f5a2"; }
 
-                _.$nextArrow.addClass('slick-disabled').attr('aria-disabled', 'true');
-                _.$prevArrow.removeClass('slick-disabled').attr('aria-disabled', 'false');
+.fa-medapps:before {
+  content: "\f3c6"; }
 
-            }
+.fa-medium:before {
+  content: "\f23a"; }
 
-        }
+.fa-medium-m:before {
+  content: "\f3c7"; }
 
-    };
+.fa-medkit:before {
+  content: "\f0fa"; }
 
-    Slick.prototype.updateDots = function() {
+.fa-medrt:before {
+  content: "\f3c8"; }
 
-        var _ = this;
+.fa-meetup:before {
+  content: "\f2e0"; }
 
-        if (_.$dots !== null) {
+.fa-megaport:before {
+  content: "\f5a3"; }
 
-            _.$dots
-                .find('li')
-                    .removeClass('slick-active')
-                    .end();
+.fa-meh:before {
+  content: "\f11a"; }
 
-            _.$dots
-                .find('li')
-                .eq(Math.floor(_.currentSlide / _.options.slidesToScroll))
-                .addClass('slick-active');
+.fa-meh-blank:before {
+  content: "\f5a4"; }
 
-        }
+.fa-meh-rolling-eyes:before {
+  content: "\f5a5"; }
 
-    };
+.fa-memory:before {
+  content: "\f538"; }
 
-    Slick.prototype.visibility = function() {
+.fa-mendeley:before {
+  content: "\f7b3"; }
 
-        var _ = this;
+.fa-menorah:before {
+  content: "\f676"; }
 
-        if ( _.options.autoplay ) {
+.fa-mercury:before {
+  content: "\f223"; }
 
-            if ( document[_.hidden] ) {
+.fa-meteor:before {
+  content: "\f753"; }
 
-                _.interrupted = true;
+.fa-microchip:before {
+  content: "\f2db"; }
 
-            } else {
+.fa-microphone:before {
+  content: "\f130"; }
 
-                _.interrupted = false;
+.fa-microphone-alt:before {
+  content: "\f3c9"; }
 
-            }
+.fa-microphone-alt-slash:before {
+  content: "\f539"; }
 
-        }
+.fa-microphone-slash:before {
+  content: "\f131"; }
 
-    };
+.fa-microscope:before {
+  content: "\f610"; }
 
-    $.fn.slick = function() {
-        var _ = this,
-            opt = arguments[0],
-            args = Array.prototype.slice.call(arguments, 1),
-            l = _.length,
-            i,
-            ret;
-        for (i = 0; i < l; i++) {
-            if (typeof opt == 'object' || typeof opt == 'undefined')
-                _[i].slick = new Slick(_[i], opt);
-            else
-                ret = _[i].slick[opt].apply(_[i].slick, args);
-            if (typeof ret != 'undefined') return ret;
-        }
-        return _;
-    };
+.fa-microsoft:before {
+  content: "\f3ca"; }
 
-}));
+.fa-minus:before {
+  content: "\f068"; }
+
+.fa-minus-circle:before {
+  content: "\f056"; }
+
+.fa-minus-square:before {
+  content: "\f146"; }
+
+.fa-mitten:before {
+  content: "\f7b5"; }
+
+.fa-mix:before {
+  content: "\f3cb"; }
+
+.fa-mixcloud:before {
+  content: "\f289"; }
+
+.fa-mizuni:before {
+  content: "\f3cc"; }
+
+.fa-mobile:before {
+  content: "\f10b"; }
+
+.fa-mobile-alt:before {
+  content: "\f3cd"; }
+
+.fa-modx:before {
+  content: "\f285"; }
+
+.fa-monero:before {
+  content: "\f3d0"; }
+
+.fa-money-bill:before {
+  content: "\f0d6"; }
+
+.fa-money-bill-alt:before {
+  content: "\f3d1"; }
+
+.fa-money-bill-wave:before {
+  content: "\f53a"; }
+
+.fa-money-bill-wave-alt:before {
+  content: "\f53b"; }
+
+.fa-money-check:before {
+  content: "\f53c"; }
+
+.fa-money-check-alt:before {
+  content: "\f53d"; }
+
+.fa-monument:before {
+  content: "\f5a6"; }
+
+.fa-moon:before {
+  content: "\f186"; }
+
+.fa-mortar-pestle:before {
+  content: "\f5a7"; }
+
+.fa-mosque:before {
+  content: "\f678"; }
+
+.fa-motorcycle:before {
+  content: "\f21c"; }
+
+.fa-mountain:before {
+  content: "\f6fc"; }
+
+.fa-mouse-pointer:before {
+  content: "\f245"; }
+
+.fa-mug-hot:before {
+  content: "\f7b6"; }
+
+.fa-music:before {
+  content: "\f001"; }
+
+.fa-napster:before {
+  content: "\f3d2"; }
+
+.fa-neos:before {
+  content: "\f612"; }
+
+.fa-network-wired:before {
+  content: "\f6ff"; }
+
+.fa-neuter:before {
+  content: "\f22c"; }
+
+.fa-newspaper:before {
+  content: "\f1ea"; }
+
+.fa-nimblr:before {
+  content: "\f5a8"; }
+
+.fa-nintendo-switch:before {
+  content: "\f418"; }
+
+.fa-node:before {
+  content: "\f419"; }
+
+.fa-node-js:before {
+  content: "\f3d3"; }
+
+.fa-not-equal:before {
+  content: "\f53e"; }
+
+.fa-notes-medical:before {
+  content: "\f481"; }
+
+.fa-npm:before {
+  content: "\f3d4"; }
+
+.fa-ns8:before {
+  content: "\f3d5"; }
+
+.fa-nutritionix:before {
+  content: "\f3d6"; }
+
+.fa-object-group:before {
+  content: "\f247"; }
+
+.fa-object-ungroup:before {
+  content: "\f248"; }
+
+.fa-odnoklassniki:before {
+  content: "\f263"; }
+
+.fa-odnoklassniki-square:before {
+  content: "\f264"; }
+
+.fa-oil-can:before {
+  content: "\f613"; }
+
+.fa-old-republic:before {
+  content: "\f510"; }
+
+.fa-om:before {
+  content: "\f679"; }
+
+.fa-opencart:before {
+  content: "\f23d"; }
+
+.fa-openid:before {
+  content: "\f19b"; }
+
+.fa-opera:before {
+  content: "\f26a"; }
+
+.fa-optin-monster:before {
+  content: "\f23c"; }
+
+.fa-osi:before {
+  content: "\f41a"; }
+
+.fa-otter:before {
+  content: "\f700"; }
+
+.fa-outdent:before {
+  content: "\f03b"; }
+
+.fa-page4:before {
+  content: "\f3d7"; }
+
+.fa-pagelines:before {
+  content: "\f18c"; }
+
+.fa-pager:before {
+  content: "\f815"; }
+
+.fa-paint-brush:before {
+  content: "\f1fc"; }
+
+.fa-paint-roller:before {
+  content: "\f5aa"; }
+
+.fa-palette:before {
+  content: "\f53f"; }
+
+.fa-palfed:before {
+  content: "\f3d8"; }
+
+.fa-pallet:before {
+  content: "\f482"; }
+
+.fa-paper-plane:before {
+  content: "\f1d8"; }
+
+.fa-paperclip:before {
+  content: "\f0c6"; }
+
+.fa-parachute-box:before {
+  content: "\f4cd"; }
+
+.fa-paragraph:before {
+  content: "\f1dd"; }
+
+.fa-parking:before {
+  content: "\f540"; }
+
+.fa-passport:before {
+  content: "\f5ab"; }
+
+.fa-pastafarianism:before {
+  content: "\f67b"; }
+
+.fa-paste:before {
+  content: "\f0ea"; }
+
+.fa-patreon:before {
+  content: "\f3d9"; }
+
+.fa-pause:before {
+  content: "\f04c"; }
+
+.fa-pause-circle:before {
+  content: "\f28b"; }
+
+.fa-paw:before {
+  content: "\f1b0"; }
+
+.fa-paypal:before {
+  content: "\f1ed"; }
+
+.fa-peace:before {
+  content: "\f67c"; }
+
+.fa-pen:before {
+  content: "\f304"; }
+
+.fa-pen-alt:before {
+  content: "\f305"; }
+
+.fa-pen-fancy:before {
+  content: "\f5ac"; }
+
+.fa-pen-nib:before {
+  content: "\f5ad"; }
+
+.fa-pen-square:before {
+  content: "\f14b"; }
+
+.fa-pencil-alt:before {
+  content: "\f303"; }
+
+.fa-pencil-ruler:before {
+  content: "\f5ae"; }
+
+.fa-penny-arcade:before {
+  content: "\f704"; }
+
+.fa-people-carry:before {
+  content: "\f4ce"; }
+
+.fa-pepper-hot:before {
+  content: "\f816"; }
+
+.fa-percent:before {
+  content: "\f295"; }
+
+.fa-percentage:before {
+  content: "\f541"; }
+
+.fa-periscope:before {
+  content: "\f3da"; }
+
+.fa-person-booth:before {
+  content: "\f756"; }
+
+.fa-phabricator:before {
+  content: "\f3db"; }
+
+.fa-phoenix-framework:before {
+  content: "\f3dc"; }
+
+.fa-phoenix-squadron:before {
+  content: "\f511"; }
+
+.fa-phone:before {
+  content: "\f095"; }
+
+.fa-phone-slash:before {
+  content: "\f3dd"; }
+
+.fa-phone-square:before {
+  content: "\f098"; }
+
+.fa-phone-volume:before {
+  content: "\f2a0"; }
+
+.fa-php:before {
+  content: "\f457"; }
+
+.fa-pied-piper:before {
+  content: "\f2ae"; }
+
+.fa-pied-piper-alt:before {
+  content: "\f1a8"; }
+
+.fa-pied-piper-hat:before {
+  content: "\f4e5"; }
+
+.fa-pied-piper-pp:before {
+  content: "\f1a7"; }
+
+.fa-piggy-bank:before {
+  content: "\f4d3"; }
+
+.fa-pills:before {
+  content: "\f484"; }
+
+.fa-pinterest:before {
+  content: "\f0d2"; }
+
+.fa-pinterest-p:before {
+  content: "\f231"; }
+
+.fa-pinterest-square:before {
+  content: "\f0d3"; }
+
+.fa-pizza-slice:before {
+  content: "\f818"; }
+
+.fa-place-of-worship:before {
+  content: "\f67f"; }
+
+.fa-plane:before {
+  content: "\f072"; }
+
+.fa-plane-arrival:before {
+  content: "\f5af"; }
+
+.fa-plane-departure:before {
+  content: "\f5b0"; }
+
+.fa-play:before {
+  content: "\f04b"; }
+
+.fa-play-circle:before {
+  content: "\f144"; }
+
+.fa-playstation:before {
+  content: "\f3df"; }
+
+.fa-plug:before {
+  content: "\f1e6"; }
+
+.fa-plus:before {
+  content: "\f067"; }
+
+.fa-plus-circle:before {
+  content: "\f055"; }
+
+.fa-plus-square:before {
+  content: "\f0fe"; }
+
+.fa-podcast:before {
+  content: "\f2ce"; }
+
+.fa-poll:before {
+  content: "\f681"; }
+
+.fa-poll-h:before {
+  content: "\f682"; }
+
+.fa-poo:before {
+  content: "\f2fe"; }
+
+.fa-poo-storm:before {
+  content: "\f75a"; }
+
+.fa-poop:before {
+  content: "\f619"; }
+
+.fa-portrait:before {
+  content: "\f3e0"; }
+
+.fa-pound-sign:before {
+  content: "\f154"; }
+
+.fa-power-off:before {
+  content: "\f011"; }
+
+.fa-pray:before {
+  content: "\f683"; }
+
+.fa-praying-hands:before {
+  content: "\f684"; }
+
+.fa-prescription:before {
+  content: "\f5b1"; }
+
+.fa-prescription-bottle:before {
+  content: "\f485"; }
+
+.fa-prescription-bottle-alt:before {
+  content: "\f486"; }
+
+.fa-print:before {
+  content: "\f02f"; }
+
+.fa-procedures:before {
+  content: "\f487"; }
+
+.fa-product-hunt:before {
+  content: "\f288"; }
+
+.fa-project-diagram:before {
+  content: "\f542"; }
+
+.fa-pushed:before {
+  content: "\f3e1"; }
+
+.fa-puzzle-piece:before {
+  content: "\f12e"; }
+
+.fa-python:before {
+  content: "\f3e2"; }
+
+.fa-qq:before {
+  content: "\f1d6"; }
+
+.fa-qrcode:before {
+  content: "\f029"; }
+
+.fa-question:before {
+  content: "\f128"; }
+
+.fa-question-circle:before {
+  content: "\f059"; }
+
+.fa-quidditch:before {
+  content: "\f458"; }
+
+.fa-quinscape:before {
+  content: "\f459"; }
+
+.fa-quora:before {
+  content: "\f2c4"; }
+
+.fa-quote-left:before {
+  content: "\f10d"; }
+
+.fa-quote-right:before {
+  content: "\f10e"; }
+
+.fa-quran:before {
+  content: "\f687"; }
+
+.fa-r-project:before {
+  content: "\f4f7"; }
+
+.fa-radiation:before {
+  content: "\f7b9"; }
+
+.fa-radiation-alt:before {
+  content: "\f7ba"; }
+
+.fa-rainbow:before {
+  content: "\f75b"; }
+
+.fa-random:before {
+  content: "\f074"; }
+
+.fa-raspberry-pi:before {
+  content: "\f7bb"; }
+
+.fa-ravelry:before {
+  content: "\f2d9"; }
+
+.fa-react:before {
+  content: "\f41b"; }
+
+.fa-reacteurope:before {
+  content: "\f75d"; }
+
+.fa-readme:before {
+  content: "\f4d5"; }
+
+.fa-rebel:before {
+  content: "\f1d0"; }
+
+.fa-receipt:before {
+  content: "\f543"; }
+
+.fa-recycle:before {
+  content: "\f1b8"; }
+
+.fa-red-river:before {
+  content: "\f3e3"; }
+
+.fa-reddit:before {
+  content: "\f1a1"; }
+
+.fa-reddit-alien:before {
+  content: "\f281"; }
+
+.fa-reddit-square:before {
+  content: "\f1a2"; }
+
+.fa-redhat:before {
+  content: "\f7bc"; }
+
+.fa-redo:before {
+  content: "\f01e"; }
+
+.fa-redo-alt:before {
+  content: "\f2f9"; }
+
+.fa-registered:before {
+  content: "\f25d"; }
+
+.fa-renren:before {
+  content: "\f18b"; }
+
+.fa-reply:before {
+  content: "\f3e5"; }
+
+.fa-reply-all:before {
+  content: "\f122"; }
+
+.fa-replyd:before {
+  content: "\f3e6"; }
+
+.fa-republican:before {
+  content: "\f75e"; }
+
+.fa-researchgate:before {
+  content: "\f4f8"; }
+
+.fa-resolving:before {
+  content: "\f3e7"; }
+
+.fa-restroom:before {
+  content: "\f7bd"; }
+
+.fa-retweet:before {
+  content: "\f079"; }
+
+.fa-rev:before {
+  content: "\f5b2"; }
+
+.fa-ribbon:before {
+  content: "\f4d6"; }
+
+.fa-ring:before {
+  content: "\f70b"; }
+
+.fa-road:before {
+  content: "\f018"; }
+
+.fa-robot:before {
+  content: "\f544"; }
+
+.fa-rocket:before {
+  content: "\f135"; }
+
+.fa-rocketchat:before {
+  content: "\f3e8"; }
+
+.fa-rockrms:before {
+  content: "\f3e9"; }
+
+.fa-route:before {
+  content: "\f4d7"; }
+
+.fa-rss:before {
+  content: "\f09e"; }
+
+.fa-rss-square:before {
+  content: "\f143"; }
+
+.fa-ruble-sign:before {
+  content: "\f158"; }
+
+.fa-ruler:before {
+  content: "\f545"; }
+
+.fa-ruler-combined:before {
+  content: "\f546"; }
+
+.fa-ruler-horizontal:before {
+  content: "\f547"; }
+
+.fa-ruler-vertical:before {
+  content: "\f548"; }
+
+.fa-running:before {
+  content: "\f70c"; }
+
+.fa-rupee-sign:before {
+  content: "\f156"; }
+
+.fa-sad-cry:before {
+  content: "\f5b3"; }
+
+.fa-sad-tear:before {
+  content: "\f5b4"; }
+
+.fa-safari:before {
+  content: "\f267"; }
+
+.fa-salesforce:before {
+  content: "\f83b"; }
+
+.fa-sass:before {
+  content: "\f41e"; }
+
+.fa-satellite:before {
+  content: "\f7bf"; }
+
+.fa-satellite-dish:before {
+  content: "\f7c0"; }
+
+.fa-save:before {
+  content: "\f0c7"; }
+
+.fa-schlix:before {
+  content: "\f3ea"; }
+
+.fa-school:before {
+  content: "\f549"; }
+
+.fa-screwdriver:before {
+  content: "\f54a"; }
+
+.fa-scribd:before {
+  content: "\f28a"; }
+
+.fa-scroll:before {
+  content: "\f70e"; }
+
+.fa-sd-card:before {
+  content: "\f7c2"; }
+
+.fa-search:before {
+  content: "\f002"; }
+
+.fa-search-dollar:before {
+  content: "\f688"; }
+
+.fa-search-location:before {
+  content: "\f689"; }
+
+.fa-search-minus:before {
+  content: "\f010"; }
+
+.fa-search-plus:before {
+  content: "\f00e"; }
+
+.fa-searchengin:before {
+  content: "\f3eb"; }
+
+.fa-seedling:before {
+  content: "\f4d8"; }
+
+.fa-sellcast:before {
+  content: "\f2da"; }
+
+.fa-sellsy:before {
+  content: "\f213"; }
+
+.fa-server:before {
+  content: "\f233"; }
+
+.fa-servicestack:before {
+  content: "\f3ec"; }
+
+.fa-shapes:before {
+  content: "\f61f"; }
+
+.fa-share:before {
+  content: "\f064"; }
+
+.fa-share-alt:before {
+  content: "\f1e0"; }
+
+.fa-share-alt-square:before {
+  content: "\f1e1"; }
+
+.fa-share-square:before {
+  content: "\f14d"; }
+
+.fa-shekel-sign:before {
+  content: "\f20b"; }
+
+.fa-shield-alt:before {
+  content: "\f3ed"; }
+
+.fa-ship:before {
+  content: "\f21a"; }
+
+.fa-shipping-fast:before {
+  content: "\f48b"; }
+
+.fa-shirtsinbulk:before {
+  content: "\f214"; }
+
+.fa-shoe-prints:before {
+  content: "\f54b"; }
+
+.fa-shopping-bag:before {
+  content: "\f290"; }
+
+.fa-shopping-basket:before {
+  content: "\f291"; }
+
+.fa-shopping-cart:before {
+  content: "\f07a"; }
+
+.fa-shopware:before {
+  content: "\f5b5"; }
+
+.fa-shower:before {
+  content: "\f2cc"; }
+
+.fa-shuttle-van:before {
+  content: "\f5b6"; }
+
+.fa-sign:before {
+  content: "\f4d9"; }
+
+.fa-sign-in-alt:before {
+  content: "\f2f6"; }
+
+.fa-sign-language:before {
+  content: "\f2a7"; }
+
+.fa-sign-out-alt:before {
+  content: "\f2f5"; }
+
+.fa-signal:before {
+  content: "\f012"; }
+
+.fa-signature:before {
+  content: "\f5b7"; }
+
+.fa-sim-card:before {
+  content: "\f7c4"; }
+
+.fa-simplybuilt:before {
+  content: "\f215"; }
+
+.fa-sistrix:before {
+  content: "\f3ee"; }
+
+.fa-sitemap:before {
+  content: "\f0e8"; }
+
+.fa-sith:before {
+  content: "\f512"; }
+
+.fa-skating:before {
+  content: "\f7c5"; }
+
+.fa-sketch:before {
+  content: "\f7c6"; }
+
+.fa-skiing:before {
+  content: "\f7c9"; }
+
+.fa-skiing-nordic:before {
+  content: "\f7ca"; }
+
+.fa-skull:before {
+  content: "\f54c"; }
+
+.fa-skull-crossbones:before {
+  content: "\f714"; }
+
+.fa-skyatlas:before {
+  content: "\f216"; }
+
+.fa-skype:before {
+  content: "\f17e"; }
+
+.fa-slack:before {
+  content: "\f198"; }
+
+.fa-slack-hash:before {
+  content: "\f3ef"; }
+
+.fa-slash:before {
+  content: "\f715"; }
+
+.fa-sleigh:before {
+  content: "\f7cc"; }
+
+.fa-sliders-h:before {
+  content: "\f1de"; }
+
+.fa-slideshare:before {
+  content: "\f1e7"; }
+
+.fa-smile:before {
+  content: "\f118"; }
+
+.fa-smile-beam:before {
+  content: "\f5b8"; }
+
+.fa-smile-wink:before {
+  content: "\f4da"; }
+
+.fa-smog:before {
+  content: "\f75f"; }
+
+.fa-smoking:before {
+  content: "\f48d"; }
+
+.fa-smoking-ban:before {
+  content: "\f54d"; }
+
+.fa-sms:before {
+  content: "\f7cd"; }
+
+.fa-snapchat:before {
+  content: "\f2ab"; }
+
+.fa-snapchat-ghost:before {
+  content: "\f2ac"; }
+
+.fa-snapchat-square:before {
+  content: "\f2ad"; }
+
+.fa-snowboarding:before {
+  content: "\f7ce"; }
+
+.fa-snowflake:before {
+  content: "\f2dc"; }
+
+.fa-snowman:before {
+  content: "\f7d0"; }
+
+.fa-snowplow:before {
+  content: "\f7d2"; }
+
+.fa-socks:before {
+  content: "\f696"; }
+
+.fa-solar-panel:before {
+  content: "\f5ba"; }
+
+.fa-sort:before {
+  content: "\f0dc"; }
+
+.fa-sort-alpha-down:before {
+  content: "\f15d"; }
+
+.fa-sort-alpha-up:before {
+  content: "\f15e"; }
+
+.fa-sort-amount-down:before {
+  content: "\f160"; }
+
+.fa-sort-amount-up:before {
+  content: "\f161"; }
+
+.fa-sort-down:before {
+  content: "\f0dd"; }
+
+.fa-sort-numeric-down:before {
+  content: "\f162"; }
+
+.fa-sort-numeric-up:before {
+  content: "\f163"; }
+
+.fa-sort-up:before {
+  content: "\f0de"; }
+
+.fa-soundcloud:before {
+  content: "\f1be"; }
+
+.fa-sourcetree:before {
+  content: "\f7d3"; }
+
+.fa-spa:before {
+  content: "\f5bb"; }
+
+.fa-space-shuttle:before {
+  content: "\f197"; }
+
+.fa-speakap:before {
+  content: "\f3f3"; }
+
+.fa-speaker-deck:before {
+  content: "\f83c"; }
+
+.fa-spider:before {
+  content: "\f717"; }
+
+.fa-spinner:before {
+  content: "\f110"; }
+
+.fa-splotch:before {
+  content: "\f5bc"; }
+
+.fa-spotify:before {
+  content: "\f1bc"; }
+
+.fa-spray-can:before {
+  content: "\f5bd"; }
+
+.fa-square:before {
+  content: "\f0c8"; }
+
+.fa-square-full:before {
+  content: "\f45c"; }
+
+.fa-square-root-alt:before {
+  content: "\f698"; }
+
+.fa-squarespace:before {
+  content: "\f5be"; }
+
+.fa-stack-exchange:before {
+  content: "\f18d"; }
+
+.fa-stack-overflow:before {
+  content: "\f16c"; }
+
+.fa-stamp:before {
+  content: "\f5bf"; }
+
+.fa-star:before {
+  content: "\f005"; }
+
+.fa-star-and-crescent:before {
+  content: "\f699"; }
+
+.fa-star-half:before {
+  content: "\f089"; }
+
+.fa-star-half-alt:before {
+  content: "\f5c0"; }
+
+.fa-star-of-david:before {
+  content: "\f69a"; }
+
+.fa-star-of-life:before {
+  content: "\f621"; }
+
+.fa-staylinked:before {
+  content: "\f3f5"; }
+
+.fa-steam:before {
+  content: "\f1b6"; }
+
+.fa-steam-square:before {
+  content: "\f1b7"; }
+
+.fa-steam-symbol:before {
+  content: "\f3f6"; }
+
+.fa-step-backward:before {
+  content: "\f048"; }
+
+.fa-step-forward:before {
+  content: "\f051"; }
+
+.fa-stethoscope:before {
+  content: "\f0f1"; }
+
+.fa-sticker-mule:before {
+  content: "\f3f7"; }
+
+.fa-sticky-note:before {
+  content: "\f249"; }
+
+.fa-stop:before {
+  content: "\f04d"; }
+
+.fa-stop-circle:before {
+  content: "\f28d"; }
+
+.fa-stopwatch:before {
+  content: "\f2f2"; }
+
+.fa-store:before {
+  content: "\f54e"; }
+
+.fa-store-alt:before {
+  content: "\f54f"; }
+
+.fa-strava:before {
+  content: "\f428"; }
+
+.fa-stream:before {
+  content: "\f550"; }
+
+.fa-street-view:before {
+  content: "\f21d"; }
+
+.fa-strikethrough:before {
+  content: "\f0cc"; }
+
+.fa-stripe:before {
+  content: "\f429"; }
+
+.fa-stripe-s:before {
+  content: "\f42a"; }
+
+.fa-stroopwafel:before {
+  content: "\f551"; }
+
+.fa-studiovinari:before {
+  content: "\f3f8"; }
+
+.fa-stumbleupon:before {
+  content: "\f1a4"; }
+
+.fa-stumbleupon-circle:before {
+  content: "\f1a3"; }
+
+.fa-subscript:before {
+  content: "\f12c"; }
+
+.fa-subway:before {
+  content: "\f239"; }
+
+.fa-suitcase:before {
+  content: "\f0f2"; }
+
+.fa-suitcase-rolling:before {
+  content: "\f5c1"; }
+
+.fa-sun:before {
+  content: "\f185"; }
+
+.fa-superpowers:before {
+  content: "\f2dd"; }
+
+.fa-superscript:before {
+  content: "\f12b"; }
+
+.fa-supple:before {
+  content: "\f3f9"; }
+
+.fa-surprise:before {
+  content: "\f5c2"; }
+
+.fa-suse:before {
+  content: "\f7d6"; }
+
+.fa-swatchbook:before {
+  content: "\f5c3"; }
+
+.fa-swimmer:before {
+  content: "\f5c4"; }
+
+.fa-swimming-pool:before {
+  content: "\f5c5"; }
+
+.fa-symfony:before {
+  content: "\f83d"; }
+
+.fa-synagogue:before {
+  content: "\f69b"; }
+
+.fa-sync:before {
+  content: "\f021"; }
+
+.fa-sync-alt:before {
+  content: "\f2f1"; }
+
+.fa-syringe:before {
+  content: "\f48e"; }
+
+.fa-table:before {
+  content: "\f0ce"; }
+
+.fa-table-tennis:before {
+  content: "\f45d"; }
+
+.fa-tablet:before {
+  content: "\f10a"; }
+
+.fa-tablet-alt:before {
+  content: "\f3fa"; }
+
+.fa-tablets:before {
+  content: "\f490"; }
+
+.fa-tachometer-alt:before {
+  content: "\f3fd"; }
+
+.fa-tag:before {
+  content: "\f02b"; }
+
+.fa-tags:before {
+  content: "\f02c"; }
+
+.fa-tape:before {
+  content: "\f4db"; }
+
+.fa-tasks:before {
+  content: "\f0ae"; }
+
+.fa-taxi:before {
+  content: "\f1ba"; }
+
+.fa-teamspeak:before {
+  content: "\f4f9"; }
+
+.fa-teeth:before {
+  content: "\f62e"; }
+
+.fa-teeth-open:before {
+  content: "\f62f"; }
+
+.fa-telegram:before {
+  content: "\f2c6"; }
+
+.fa-telegram-plane:before {
+  content: "\f3fe"; }
+
+.fa-temperature-high:before {
+  content: "\f769"; }
+
+.fa-temperature-low:before {
+  content: "\f76b"; }
+
+.fa-tencent-weibo:before {
+  content: "\f1d5"; }
+
+.fa-tenge:before {
+  content: "\f7d7"; }
+
+.fa-terminal:before {
+  content: "\f120"; }
+
+.fa-text-height:before {
+  content: "\f034"; }
+
+.fa-text-width:before {
+  content: "\f035"; }
+
+.fa-th:before {
+  content: "\f00a"; }
+
+.fa-th-large:before {
+  content: "\f009"; }
+
+.fa-th-list:before {
+  content: "\f00b"; }
+
+.fa-the-red-yeti:before {
+  content: "\f69d"; }
+
+.fa-theater-masks:before {
+  content: "\f630"; }
+
+.fa-themeco:before {
+  content: "\f5c6"; }
+
+.fa-themeisle:before {
+  content: "\f2b2"; }
+
+.fa-thermometer:before {
+  content: "\f491"; }
+
+.fa-thermometer-empty:before {
+  content: "\f2cb"; }
+
+.fa-thermometer-full:before {
+  content: "\f2c7"; }
+
+.fa-thermometer-half:before {
+  content: "\f2c9"; }
+
+.fa-thermometer-quarter:before {
+  content: "\f2ca"; }
+
+.fa-thermometer-three-quarters:before {
+  content: "\f2c8"; }
+
+.fa-think-peaks:before {
+  content: "\f731"; }
+
+.fa-thumbs-down:before {
+  content: "\f165"; }
+
+.fa-thumbs-up:before {
+  content: "\f164"; }
+
+.fa-thumbtack:before {
+  content: "\f08d"; }
+
+.fa-ticket-alt:before {
+  content: "\f3ff"; }
+
+.fa-times:before {
+  content: "\f00d"; }
+
+.fa-times-circle:before {
+  content: "\f057"; }
+
+.fa-tint:before {
+  content: "\f043"; }
+
+.fa-tint-slash:before {
+  content: "\f5c7"; }
+
+.fa-tired:before {
+  content: "\f5c8"; }
+
+.fa-toggle-off:before {
+  content: "\f204"; }
+
+.fa-toggle-on:before {
+  content: "\f205"; }
+
+.fa-toilet:before {
+  content: "\f7d8"; }
+
+.fa-toilet-paper:before {
+  content: "\f71e"; }
+
+.fa-toolbox:before {
+  content: "\f552"; }
+
+.fa-tools:before {
+  content: "\f7d9"; }
+
+.fa-tooth:before {
+  content: "\f5c9"; }
+
+.fa-torah:before {
+  content: "\f6a0"; }
+
+.fa-torii-gate:before {
+  content: "\f6a1"; }
+
+.fa-tractor:before {
+  content: "\f722"; }
+
+.fa-trade-federation:before {
+  content: "\f513"; }
+
+.fa-trademark:before {
+  content: "\f25c"; }
+
+.fa-traffic-light:before {
+  content: "\f637"; }
+
+.fa-train:before {
+  content: "\f238"; }
+
+.fa-tram:before {
+  content: "\f7da"; }
+
+.fa-transgender:before {
+  content: "\f224"; }
+
+.fa-transgender-alt:before {
+  content: "\f225"; }
+
+.fa-trash:before {
+  content: "\f1f8"; }
+
+.fa-trash-alt:before {
+  content: "\f2ed"; }
+
+.fa-trash-restore:before {
+  content: "\f829"; }
+
+.fa-trash-restore-alt:before {
+  content: "\f82a"; }
+
+.fa-tree:before {
+  content: "\f1bb"; }
+
+.fa-trello:before {
+  content: "\f181"; }
+
+.fa-tripadvisor:before {
+  content: "\f262"; }
+
+.fa-trophy:before {
+  content: "\f091"; }
+
+.fa-truck:before {
+  content: "\f0d1"; }
+
+.fa-truck-loading:before {
+  content: "\f4de"; }
+
+.fa-truck-monster:before {
+  content: "\f63b"; }
+
+.fa-truck-moving:before {
+  content: "\f4df"; }
+
+.fa-truck-pickup:before {
+  content: "\f63c"; }
+
+.fa-tshirt:before {
+  content: "\f553"; }
+
+.fa-tty:before {
+  content: "\f1e4"; }
+
+.fa-tumblr:before {
+  content: "\f173"; }
+
+.fa-tumblr-square:before {
+  content: "\f174"; }
+
+.fa-tv:before {
+  content: "\f26c"; }
+
+.fa-twitch:before {
+  content: "\f1e8"; }
+
+.fa-twitter:before {
+  content: "\f099"; }
+
+.fa-twitter-square:before {
+  content: "\f081"; }
+
+.fa-typo3:before {
+  content: "\f42b"; }
+
+.fa-uber:before {
+  content: "\f402"; }
+
+.fa-ubuntu:before {
+  content: "\f7df"; }
+
+.fa-uikit:before {
+  content: "\f403"; }
+
+.fa-umbrella:before {
+  content: "\f0e9"; }
+
+.fa-umbrella-beach:before {
+  content: "\f5ca"; }
+
+.fa-underline:before {
+  content: "\f0cd"; }
+
+.fa-undo:before {
+  content: "\f0e2"; }
+
+.fa-undo-alt:before {
+  content: "\f2ea"; }
+
+.fa-uniregistry:before {
+  content: "\f404"; }
+
+.fa-universal-access:before {
+  content: "\f29a"; }
+
+.fa-university:before {
+  content: "\f19c"; }
+
+.fa-unlink:before {
+  content: "\f127"; }
+
+.fa-unlock:before {
+  content: "\f09c"; }
+
+.fa-unlock-alt:before {
+  content: "\f13e"; }
+
+.fa-untappd:before {
+  content: "\f405"; }
+
+.fa-upload:before {
+  content: "\f093"; }
+
+.fa-ups:before {
+  content: "\f7e0"; }
+
+.fa-usb:before {
+  content: "\f287"; }
+
+.fa-user:before {
+  content: "\f007"; }
+
+.fa-user-alt:before {
+  content: "\f406"; }
+
+.fa-user-alt-slash:before {
+  content: "\f4fa"; }
+
+.fa-user-astronaut:before {
+  content: "\f4fb"; }
+
+.fa-user-check:before {
+  content: "\f4fc"; }
+
+.fa-user-circle:before {
+  content: "\f2bd"; }
+
+.fa-user-clock:before {
+  content: "\f4fd"; }
+
+.fa-user-cog:before {
+  content: "\f4fe"; }
+
+.fa-user-edit:before {
+  content: "\f4ff"; }
+
+.fa-user-friends:before {
+  content: "\f500"; }
+
+.fa-user-graduate:before {
+  content: "\f501"; }
+
+.fa-user-injured:before {
+  content: "\f728"; }
+
+.fa-user-lock:before {
+  content: "\f502"; }
+
+.fa-user-md:before {
+  content: "\f0f0"; }
+
+.fa-user-minus:before {
+  content: "\f503"; }
+
+.fa-user-ninja:before {
+  content: "\f504"; }
+
+.fa-user-nurse:before {
+  content: "\f82f"; }
+
+.fa-user-plus:before {
+  content: "\f234"; }
+
+.fa-user-secret:before {
+  content: "\f21b"; }
+
+.fa-user-shield:before {
+  content: "\f505"; }
+
+.fa-user-slash:before {
+  content: "\f506"; }
+
+.fa-user-tag:before {
+  content: "\f507"; }
+
+.fa-user-tie:before {
+  content: "\f508"; }
+
+.fa-user-times:before {
+  content: "\f235"; }
+
+.fa-users:before {
+  content: "\f0c0"; }
+
+.fa-users-cog:before {
+  content: "\f509"; }
+
+.fa-usps:before {
+  content: "\f7e1"; }
+
+.fa-ussunnah:before {
+  content: "\f407"; }
+
+.fa-utensil-spoon:before {
+  content: "\f2e5"; }
+
+.fa-utensils:before {
+  content: "\f2e7"; }
+
+.fa-vaadin:before {
+  content: "\f408"; }
+
+.fa-vector-square:before {
+  content: "\f5cb"; }
+
+.fa-venus:before {
+  content: "\f221"; }
+
+.fa-venus-double:before {
+  content: "\f226"; }
+
+.fa-venus-mars:before {
+  content: "\f228"; }
+
+.fa-viacoin:before {
+  content: "\f237"; }
+
+.fa-viadeo:before {
+  content: "\f2a9"; }
+
+.fa-viadeo-square:before {
+  content: "\f2aa"; }
+
+.fa-vial:before {
+  content: "\f492"; }
+
+.fa-vials:before {
+  content: "\f493"; }
+
+.fa-viber:before {
+  content: "\f409"; }
+
+.fa-virus:before {
+  content: "\f974"; } 
+
+.fa-video:before {
+  content: "\f03d"; }
+
+.fa-video-slash:before {
+  content: "\f4e2"; }
+
+.fa-vihara:before {
+  content: "\f6a7"; }
+
+.fa-vimeo:before {
+  content: "\f40a"; }
+
+.fa-vimeo-square:before {
+  content: "\f194"; }
+
+.fa-vimeo-v:before {
+  content: "\f27d"; }
+
+.fa-vine:before {
+  content: "\f1ca"; }
+
+.fa-vk:before {
+  content: "\f189"; }
+
+.fa-vnv:before {
+  content: "\f40b"; }
+
+.fa-volleyball-ball:before {
+  content: "\f45f"; }
+
+.fa-volume-down:before {
+  content: "\f027"; }
+
+.fa-volume-mute:before {
+  content: "\f6a9"; }
+
+.fa-volume-off:before {
+  content: "\f026"; }
+
+.fa-volume-up:before {
+  content: "\f028"; }
+
+.fa-vote-yea:before {
+  content: "\f772"; }
+
+.fa-vr-cardboard:before {
+  content: "\f729"; }
+
+.fa-vuejs:before {
+  content: "\f41f"; }
+
+.fa-walking:before {
+  content: "\f554"; }
+
+.fa-wallet:before {
+  content: "\f555"; }
+
+.fa-warehouse:before {
+  content: "\f494"; }
+
+.fa-water:before {
+  content: "\f773"; }
+
+.fa-wave-square:before {
+  content: "\f83e"; }
+
+.fa-waze:before {
+  content: "\f83f"; }
+
+.fa-weebly:before {
+  content: "\f5cc"; }
+
+.fa-weibo:before {
+  content: "\f18a"; }
+
+.fa-weight:before {
+  content: "\f496"; }
+
+.fa-weight-hanging:before {
+  content: "\f5cd"; }
+
+.fa-weixin:before {
+  content: "\f1d7"; }
+
+.fa-whatsapp:before {
+  content: "\f232"; }
+
+.fa-whatsapp-square:before {
+  content: "\f40c"; }
+
+.fa-wheelchair:before {
+  content: "\f193"; }
+
+.fa-whmcs:before {
+  content: "\f40d"; }
+
+.fa-wifi:before {
+  content: "\f1eb"; }
+
+.fa-wikipedia-w:before {
+  content: "\f266"; }
+
+.fa-wind:before {
+  content: "\f72e"; }
+
+.fa-window-close:before {
+  content: "\f410"; }
+
+.fa-window-maximize:before {
+  content: "\f2d0"; }
+
+.fa-window-minimize:before {
+  content: "\f2d1"; }
+
+.fa-window-restore:before {
+  content: "\f2d2"; }
+
+.fa-windows:before {
+  content: "\f17a"; }
+
+.fa-wine-bottle:before {
+  content: "\f72f"; }
+
+.fa-wine-glass:before {
+  content: "\f4e3"; }
+
+.fa-wine-glass-alt:before {
+  content: "\f5ce"; }
+
+.fa-wix:before {
+  content: "\f5cf"; }
+
+.fa-wizards-of-the-coast:before {
+  content: "\f730"; }
+
+.fa-wolf-pack-battalion:before {
+  content: "\f514"; }
+
+.fa-won-sign:before {
+  content: "\f159"; }
+
+.fa-wordpress:before {
+  content: "\f19a"; }
+
+.fa-wordpress-simple:before {
+  content: "\f411"; }
+
+.fa-wpbeginner:before {
+  content: "\f297"; }
+
+.fa-wpexplorer:before {
+  content: "\f2de"; }
+
+.fa-wpforms:before {
+  content: "\f298"; }
+
+.fa-wpressr:before {
+  content: "\f3e4"; }
+
+.fa-wrench:before {
+  content: "\f0ad"; }
+
+.fa-x-ray:before {
+  content: "\f497"; }
+
+.fa-xbox:before {
+  content: "\f412"; }
+
+.fa-xing:before {
+  content: "\f168"; }
+
+.fa-xing-square:before {
+  content: "\f169"; }
+
+.fa-y-combinator:before {
+  content: "\f23b"; }
+
+.fa-yahoo:before {
+  content: "\f19e"; }
+
+.fa-yammer:before {
+  content: "\f840"; }
+
+.fa-yandex:before {
+  content: "\f413"; }
+
+.fa-yandex-international:before {
+  content: "\f414"; }
+
+.fa-yarn:before {
+  content: "\f7e3"; }
+
+.fa-yelp:before {
+  content: "\f1e9"; }
+
+.fa-yen-sign:before {
+  content: "\f157"; }
+
+.fa-yin-yang:before {
+  content: "\f6ad"; }
+
+.fa-yoast:before {
+  content: "\f2b1"; }
+
+.fa-youtube:before {
+  content: "\f167"; }
+
+.fa-youtube-square:before {
+  content: "\f431"; }
+
+.fa-zhihu:before {
+  content: "\f63f"; }
+
+.sr-only {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px; }
+
+.sr-only-focusable:active, .sr-only-focusable:focus {
+  clip: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  position: static;
+  width: auto; }
+
+/*!
+ * Font Awesome Free 5.8.1 by @fontawesome - https://fontawesome.com
+ * License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License)
+ */
+@font-face {
+  font-family: 'Font Awesome 5 Free';
+  font-style: normal;
+  font-weight: 900;
+  font-display: auto;
+  src: url("fonts/fa-solid-900.eot");
+  src: url("fonts/fa-solid-900.eot?#iefix") format("embedded-opentype"), url("fonts/fa-solid-900.woff2") format("woff2"), url("fonts/fa-solid-900.woff") format("woff"), url("fonts/fa-solid-900.ttf") format("truetype"), url("fonts/fa-solid-900.svg#fontawesome") format("svg"); }
+
+.fa,
+.fas {
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900; }
+
+.site-search .widget_product_search form input[type=search],
+.site-search .widget_product_search form input[type=text] {
+  padding-left: 2.617924em; }
+
+#comments .commentlist .bypostauthor > .comment-body cite::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f15c";
+  margin-left: 0.5407911001em; }
+
+#comments .commentlist .reply a::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f3e5";
+  margin-left: 0.5407911001em; }
+
+#comments .commentlist .reply a.comment-edit-link::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f303"; }
+
+#respond #cancel-comment-reply-link::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f057";
+  display: block; }
+
+.sticky .entry-title::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f08d";
+  margin-right: 0.5407911001em; }
+
+button.loading,
+input[type='button'].loading,
+input[type='reset'].loading,
+input[type='submit'].loading,
+.button.loading,
+.wc-block-grid__products .wc-block-grid__product .wp-block-button__link.loading,
+.added_to_cart.loading {
+  position: relative; }
+  button.loading::after,
+  input[type='button'].loading::after,
+  input[type='reset'].loading::after,
+  input[type='submit'].loading::after,
+  .button.loading::after,
+  .wc-block-grid__products .wc-block-grid__product .wp-block-button__link.loading::after,
+  .added_to_cart.loading::after {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f110";
+    -webkit-animation: fa-spin 0.75s linear infinite;
+            animation: fa-spin 0.75s linear infinite;
+    height: 20px;
+    width: 20px;
+    line-height: 20px;
+    font-size: 20px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    display: block; }
+
+.main-navigtion ul li a::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f15c";
+  margin-right: 0.5407911001em; }
+
+.handheld-navigation ul.menu li button::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f107"; }
+
+.site-main nav.navigation .nav-previous a::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f30a";
+  margin-right: 0.5407911001em; }
+
+.site-main nav.navigation .nav-next a::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f30b";
+  margin-left: 0.5407911001em; }
+
+.widget_search form::before,
+.widget_product_search form::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f002";
+  position: absolute;
+  top: 1em;
+  left: 1em;
+  line-height: 1; }
+
+.widget_search form input[type=text],
+.widget_search form input[type=search],
+.widget_product_search form input[type=text],
+.widget_product_search form input[type=search] {
+  padding-left: 2.617924em; }
+
+.storefront-handheld-footer-bar ul li > a::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  text-align: center;
+  line-height: 2.618046972;
+  font-size: 1.618em;
+  text-indent: 0;
+  display: block;
+  cursor: pointer; }
+
+.storefront-handheld-footer-bar ul li.search > a::before {
+  content: "\f002"; }
+
+.storefront-handheld-footer-bar ul li.my-account > a::before {
+  content: "\f007"; }
+
+.storefront-handheld-footer-bar ul li.cart > a::before {
+  content: "\f291"; }
+
+.storefront-product-pagination a[rel='prev']::after, .storefront-product-pagination a[rel='next']::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline; }
+
+.storefront-product-pagination a[rel='prev']::after {
+  content: "\f104";
+  padding-right: 1.41575em; }
+
+.storefront-product-pagination a[rel='next']::after {
+  content: "\f105";
+  padding-left: 1.41575em; }
+
+.single-product .pswp__button {
+  background-color: transparent; }
+
+.single-product div.product .woocommerce-product-gallery .woocommerce-product-gallery__trigger {
+  text-indent: -999px;
+  overflow: hidden; }
+  .single-product div.product .woocommerce-product-gallery .woocommerce-product-gallery__trigger::before {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f00e";
+    display: block;
+    line-height: 2;
+    text-indent: 0; }
+  .single-product div.product .woocommerce-product-gallery .woocommerce-product-gallery__trigger img {
+    display: none !important; }
+
+.stock::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  margin-right: 0.5407911001em; }
+
+.stock.in-stock::before {
+  content: "\f118"; }
+
+.stock.out-of-stock::before {
+  content: "\f119"; }
+
+a.reset_variations::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f021";
+  margin-right: 0.5407911001em; }
+
+.woocommerce-breadcrumb a:first-of-type::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f015";
+  margin-right: 0.5407911001em; }
+
+.widget_recent_entries ul,
+.widget_pages ul,
+.widget_categories ul,
+.widget_archive ul,
+.widget_recent_comments ul,
+.widget_nav_menu ul,
+.widget_links ul,
+.widget_product_categories ul,
+.widget_layered_nav ul,
+.widget_layered_nav_filters ul {
+  margin: 0; }
+  .widget_recent_entries ul li,
+  .widget_pages ul li,
+  .widget_categories ul li,
+  .widget_archive ul li,
+  .widget_recent_comments ul li,
+  .widget_nav_menu ul li,
+  .widget_links ul li,
+  .widget_product_categories ul li,
+  .widget_layered_nav ul li,
+  .widget_layered_nav_filters ul li {
+    padding-left: 1.618em; }
+    .widget_recent_entries ul li::before,
+    .widget_pages ul li::before,
+    .widget_categories ul li::before,
+    .widget_archive ul li::before,
+    .widget_recent_comments ul li::before,
+    .widget_nav_menu ul li::before,
+    .widget_links ul li::before,
+    .widget_product_categories ul li::before,
+    .widget_layered_nav ul li::before,
+    .widget_layered_nav_filters ul li::before {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: inline-block;
+      font-style: normal;
+      font-variant: normal;
+      font-weight: normal;
+      line-height: 1;
+      font-family: 'Font Awesome 5 Free';
+      font-weight: 900;
+      line-height: inherit;
+      vertical-align: baseline;
+      margin-right: 0.5407911001em;
+      display: block;
+      float: left;
+      opacity: 0.35;
+      margin-left: -1.618em;
+      width: 1em; }
+
+.widget_product_categories ul li::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f07b"; }
+
+.widget_product_categories ul li.current-cat::before {
+  content: "\f07c"; }
+
+.widget_layered_nav li::before {
+  content: "\f0c8"; }
+
+.widget_layered_nav .chosen::before {
+  content: "\f14a"; }
+
+.widget_layered_nav_filters ul li.chosen::before {
+  content: "\f00d";
+  color: #e2401c;
+  opacity: 1; }
+
+.widget_recent_entries ul li::before,
+.widget_pages ul li::before {
+  content: "\f15c"; }
+
+.widget_categories ul li::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f07b"; }
+
+.widget_categories ul li.current-cat::before {
+  content: "\f07c"; }
+
+.widget_archive ul li::before {
+  content: "\f07c"; }
+
+.widget_recent_comments ul li::before {
+  content: "\f075"; }
+
+.widget_nav_menu ul li::before {
+  content: "\f15c"; }
+
+.widget_links ul li::before {
+  content: "\f35d"; }
+
+a.remove {
+  display: block;
+  width: 1.618em;
+  height: 1.618em;
+  line-height: 1.618;
+  font-weight: 400;
+  text-indent: -9999px;
+  position: relative; }
+  a.remove::before {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f057";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    color: #737781;
+    line-height: 1.618;
+    text-indent: 0;
+    text-align: center; }
+
+.woocommerce-shipping-calculator > p:first-child a::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f0d1";
+  margin-right: 0.3342343017em; }
+
+.blockUI::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f110";
+  -webkit-animation: fa-spin 0.75s linear infinite;
+          animation: fa-spin 0.75s linear infinite;
+  height: 30px;
+  width: 30px;
+  line-height: 30px;
+  font-size: 30px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-left: -15px;
+  margin-top: -15px; }
+
+.woocommerce-pagination .next,
+.woocommerce-pagination .prev {
+  text-indent: -9999px;
+  display: inline-block;
+  position: relative; }
+  .woocommerce-pagination .next::after,
+  .woocommerce-pagination .prev::after {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f0d9";
+    text-indent: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1em;
+    height: 1em;
+    -webkit-transform: translateX(-50%) translateY(-50%);
+        -ms-transform: translateX(-50%) translateY(-50%);
+            transform: translateX(-50%) translateY(-50%);
+    line-height: 1; }
+
+.woocommerce-pagination .next::after {
+  content: "\f0da"; }
+
+.woocommerce-breadcrumb .breadcrumb-separator {
+  text-indent: -9999px;
+  position: relative;
+  display: inline-block;
+  padding: 0 6.8535260698em; }
+  .woocommerce-breadcrumb .breadcrumb-separator::after {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f105";
+    display: block;
+    font-size: 0.875em;
+    text-indent: 0;
+    line-height: initial;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1em;
+    height: 1em;
+    -webkit-transform: translateX(-50%) translateY(-50%);
+        -ms-transform: translateX(-50%) translateY(-50%);
+            transform: translateX(-50%) translateY(-50%);
+    text-align: center;
+    opacity: 0.25; }
+
+#payment .payment_methods > .woocommerce-PaymentMethod > label::before,
+#payment .payment_methods > .wc_payment_method > label::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f111";
+  margin-right: 0.5407911001em;
+  -webkit-transition: color, ease, 0.2s;
+  transition: color, ease, 0.2s; }
+
+#payment .payment_methods li.woocommerce-PaymentMethod > input[type=radio]:first-child, #payment .payment_methods li.wc_payment_method > input[type=radio]:first-child {
+  border: 0;
+  clip: rect(1px, 1px, 1px, 1px);
+  -webkit-clip-path: inset(50%);
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+  word-wrap: normal !important; }
+  #payment .payment_methods li.woocommerce-PaymentMethod > input[type=radio]:first-child:checked + label::before, #payment .payment_methods li.wc_payment_method > input[type=radio]:first-child:checked + label::before {
+    content: "\f192"; }
+
+.woocommerce-password-strength::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f119";
+  margin-left: 0.5407911001em; }
+
+.woocommerce-password-strength.strong::after {
+  content: "\f118"; }
+
+.woocommerce-password-strength.good::after {
+  content: "\f11a"; }
+
+.woocommerce-MyAccount-navigation ul li.is-active a::before {
+  opacity: 1; }
+
+.woocommerce-MyAccount-navigation ul li a::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f15c";
+  line-height: 1.618;
+  margin-left: 0.5407911001em;
+  width: 1.41575em;
+  text-align: right;
+  float: right;
+  opacity: 0.25; }
+
+.woocommerce-MyAccount-navigation ul li a:hover::before {
+  opacity: 1; }
+
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--dashboard a::before {
+  content: "\f3fd"; }
+
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--orders a::before {
+  content: "\f291"; }
+
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--downloads a::before {
+  content: "\f1c6"; }
+
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--edit-address a::before {
+  content: "\f015"; }
+
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--payment-methods a::before {
+  content: "\f09d"; }
+
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--edit-account a::before {
+  content: "\f007"; }
+
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--customer-logout a::before {
+  content: "\f2f5"; }
+
+.woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--subscriptions a::before {
+  content: "\f021"; }
+
+.my_account_orders .button.view::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f06e";
+  margin-left: 0.5407911001em; }
+
+p.order-again .button::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f021";
+  margin-left: 0.5407911001em; }
+
+.woocommerce-MyAccount-downloads .button::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f381";
+  margin-left: 0.5407911001em; }
+
+.demo_store::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f05a";
+  margin-right: 0.5407911001em; }
+
+.woocommerce-tabs ul.tabs li::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f107";
+  display: block;
+  position: absolute;
+  top: 50%;
+  right: -1em;
+  -webkit-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+          transform: translateY(-50%);
+  opacity: 0;
+  -webkit-transition: all, ease, 0.3s;
+  transition: all, ease, 0.3s; }
+
+.woocommerce-tabs ul.tabs li.active::after {
+  opacity: 1;
+  right: 0; }
+
+.wc-forward::after,
+.woocommerce-Button--next::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f30b";
+  margin-left: 0.5407911001em; }
+
+.woocommerce-Button--previous::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f30a";
+  margin-right: 0.5407911001em; }
+
+#reviews .commentlist li p.meta .verified {
+  display: inline-block;
+  height: 1.41575em;
+  width: 1.41575em;
+  position: relative;
+  text-indent: -9999px; }
+  #reviews .commentlist li p.meta .verified::before {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f058";
+    color: #0f834d;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1.41575em;
+    height: 1.41575em;
+    text-indent: 0;
+    text-align: center;
+    line-height: 1.618em; }
+
+/**
+ * Composite Products
+ */
+.single-product div.product .component_selections .clear_component_options::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f021";
+  margin-right: 0.5407911001em; }
+
+/**
+ * Mix and Match
+ */
+.cart .mnm_table_item .mnm_table_item_indent::before,
+.shop_table .mnm_table_item .mnm_table_item_indent::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f3bf";
+  -ms-filter: "progid:DXImageTransform.Microsoft.BasicImage(rotation=1)";
+  -webkit-transform: rotate(90deg);
+      -ms-transform: rotate(90deg);
+          transform: rotate(90deg);
+  margin-right: 0.3819820591em;
+  opacity: 0.25; }
+
+/**
+ * Quick view
+ */
+.quick-view-button::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f06e";
+  margin-right: 0.6180469716em; }
+
+/**
+ * Ship multiple addresses
+ */
+.woocommerce-page .ship_address .gift-form label::after,
+.woocommerce-page .no_shipping_address .gift-form label::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f06b";
+  margin-left: 0.5407911001em; }
+
+.woocommerce-page .ship_address .modify-address-button::before,
+.woocommerce-page .no_shipping_address .modify-address-button::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f044";
+  margin-right: 0.5407911001em; }
+
+.woocommerce-page .addresses + .addresses header.title a::before {
+  content: "\f067"; }
+
+/**
+ * Product reviews pro
+ */
+.woocommerce .woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--contributions a::before,
+.woocommerce-page .woocommerce-MyAccount-navigation li.woocommerce-MyAccount-navigation-link--contributions a::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f005"; }
+
+/**
+ * Variation Swatches
+ */
+a#variations_clear::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f021";
+  margin-right: 0.5407911001em; }
+
+/**
+ * Wishlists
+ */
+.wl-add-link::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f004";
+  margin-right: 0.5407911001em; }
+
+.button.wl-create-new::before {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: inline-block;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  line-height: inherit;
+  vertical-align: baseline;
+  content: "\f067";
+  margin-right: 0.5407911001em; }
+
+@media (min-width: 768px) {
+  .main-navigation ul.menu > li.menu-item-has-children > a::after, .main-navigation ul.menu > li.page_item_has_children > a::after,
+  .main-navigation ul.nav-menu > li.menu-item-has-children > a::after,
+  .main-navigation ul.nav-menu > li.page_item_has_children > a::after {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f107";
+    margin-left: 1em; }
+  .main-navigation ul.menu ul li.menu-item-has-children > a::after, .main-navigation ul.menu ul li.page_item_has_children > a::after,
+  .main-navigation ul.nav-menu ul li.menu-item-has-children > a::after,
+  .main-navigation ul.nav-menu ul li.page_item_has_children > a::after {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f105";
+    float: right;
+    line-height: 1.618; }
+  .demo_store a.woocommerce-store-notice__dismiss-link::before {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f057";
+    margin-right: 0.3342343017em; }
+  .site-header-cart .cart-contents::after {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f291";
+    height: 1em;
+    float: right;
+    line-height: 1.618; }
+  .addresses header.title a {
+    display: block;
+    width: 1em;
+    height: 1em;
+    text-indent: -9999px;
+    position: relative;
+    padding: 0.875em;
+    margin-top: 0.6180469716em; }
+    .addresses header.title a::before {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: inline-block;
+      font-style: normal;
+      font-variant: normal;
+      font-weight: normal;
+      line-height: 1;
+      font-family: 'Font Awesome 5 Free';
+      font-weight: 900;
+      line-height: inherit;
+      vertical-align: baseline;
+      content: "\f044";
+      line-height: 1.618;
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      text-align: center;
+      text-indent: 0; }
+  .woocommerce-tabs ul.tabs li::after {
+    content: "\f105"; }
+  /**
+	 * Wishlists
+	 */
+  #wl-wrapper .wl-tabs > li.active::after {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    line-height: 1;
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    line-height: inherit;
+    vertical-align: baseline;
+    content: "\f105";
+    display: block !important;
+    position: absolute;
+    top: 50%;
+    height: 1em;
+    width: 1em;
+    margin-top: -0.5em; } }

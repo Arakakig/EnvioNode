@@ -147,6 +147,13 @@ const attConstruct = () => {
         })
     })
 
+    const enviarMensagemTeste = Button(uniKey(), {
+        classNameB: "button-7",
+        content: [Icon('Check'), ' Enviar Mensagem Teste'],
+        click: (() => {
+            enviarMensagensWhatsAppTreino()
+        })
+    })
 
     const buttonsFinal = Section(uniKey(), { classNameB: "buttonsFinalModal" });
 
@@ -172,7 +179,8 @@ const attConstruct = () => {
         divNameContent,
         space(20),
         inputDivContent,
-        buttonsFinal
+        buttonsFinal,
+        // enviarMensagemTeste
     ])
 
     const cobrancaSection = Section(uniKey(), { classNameB: "allBodyConstruct" });
@@ -836,6 +844,29 @@ function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo =
             //err
         })
 }
+
+function enviarMensagensWhatsAppTreino() {
+    const mensagem = 'Treinamento de envio de mensagens';
+    fetch('/treinaNumber', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            mensagem: mensagem
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro ao enviar mensagens');
+        }
+        console.log('Mensagens enviadas com sucesso');
+    })
+    .catch(error => {
+        console.error('Erro ao enviar mensagens:', error);
+    });
+}
+
 function CancelWhats() {
 
     $.ajax({
