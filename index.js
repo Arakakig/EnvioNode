@@ -21,17 +21,7 @@ app.get("/*", (req, res) => {
 
 
 
-function transformNumber(number) {
-    const numberSeparator = number.split(' ');
-    let newNumber;
-    if (numberSeparator[1].length == 9) {
-        const numberSeparator9 = numberSeparator[1].split('');
-        let firstElement = numberSeparator9.shift();
-        newNumber = numberSeparator[0] + ' ' + numberSeparator9;
-        return newNumber;
-    }
-    return number;
-}
+
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true }));
 
@@ -41,10 +31,8 @@ let ws;
 let sessionData;
 
 
-/**
- * Verificamos se salvamos as credenciais para fazer o login
- * esta etapa evita verificar novamente o QRCODE
- */
+
+//-----------------------------------------------------------Com autenticação-----------------------------------------------------------
 const withSession = async () => {
     sessionData = require(SESSION_FILE_PATH);
     ws = new Client({ authStrategy: new LocalAuth({ dataPath: "sessions", }), webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html', } });
@@ -57,9 +45,8 @@ const withSession = async () => {
 }
 
 
-/**
- * Geramos um QRCODE para iniciar a sessão
- */
+//-----------------------------------------------------------Sem autenticação-----------------------------------------------------------
+
 const withOutSession = async () => {
     ws = new Client({
         puppeteer: {
@@ -94,6 +81,8 @@ const withOutSession = async () => {
     ws.initialize();
 }
 
+
+
 (fs.existsSync(SESSION_FILE_PATH)) ? withSession() : withOutSession();
 
 
@@ -108,43 +97,20 @@ const sendMessageMedia = (number, file, caption = '') => {
 
 }
 
-const sendButton = (number) => {
-    const productsList = new List(
-        "Here's our list of products at 50% off",
-        "View all products",
-        [
-            {
-                title: "Products list",
-                rows: [
-                    { id: "apple", title: "Apple" },
-                    { id: "mango", title: "Mango" },
-                    { id: "banana", title: "Banana" },
-                ],
-            },
-        ],
-        "Please select a product"
-    );
-    let text = 'Olá, tudo bem? Aqui é da juventude da Primeira Batista. Gostariamos de fazer uma pesquisa com você! Você atualmente está inserido em qual dessas redes?';
-    let title = "Você atualmente está inserido em qual dessas redes?";
-    let button = new Buttons(text, [{ body: 'Livres' }, { body: 'Flow' }], title, 'Ficaremos felizes em saber!');
-
-    ws.sendMessage(number, button);
-}
-
-function toTitleCase(str) {
-    return str.replace(
-        /\w\S*/g,
-        function (txt) {
-            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-        }
-    );
-}
-
+//--------------------------------------------------------Verifica se está em execução--------------------------------------------------------
 let isSending = false;
 let continueRoading = true;
 
 function numberAleatorio(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function createFile(data) {
+    const csvDataResult = data.map(object => `${object.name},${object.number},${object.enviou} \n`).join('');
+    fs.writeFile('Enviados.csv', csvDataResult, (err) => {
+        if (err) throw err;
+    });
+
 }
 
 
@@ -157,40 +123,58 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
     const files = req.files;
 
     const data = req.body;
-    // sendButton(data.number);
     const phoneNumbers = [];
-    let array = [], messageContent;
     let numbersArray = []
     let numberSend = JSON.parse(data.listDocUsersSend);
     let dataTable = [];
     async.timesSeries(numberSend.length, (i, next) => {
         if (!continueRoading) return true;
+        
         const element = numberSend[i];
-        if (element === element.number) {
-            return res.status(400).json({ message: 'O número em questão não existe' });
-        }
+        console.log(element)
+        let shouldSend = true;
         let numberUser;
-        if (element.number == '') {
+
+        //---------------------------------------Verifica se o número é válido---------------------------------------
+
+        if (element === element.number || element.number == '' || element.number == undefined || element.number == null) {
             return res.status(400).json({ message: 'O número em questão não existe' });
         }
-        numberUser = element.number.replace(/\s/g, '').replace(/[^a-zA-Z0-9]/g, '');
+
+        //---------------------------------------Remove caracteres especiais e atualiza o ddd------------------------
+        numberUser = element.number.replace(/\s/g, '').replace(/[^a-zA-Z0-9]/g, '').replace('@c.us', '');
         if (numberUser.length < 10) {
             numberUser = "67" + numberUser;
+
         }
-        numberUser = numberUser.replace('@c.us', '');
+        //---------------------------------------Se tiver o 9 inicial, retira----------------------------------------
         if (numberUser.length === 11 && numberUser[2] === '9') {
             numberUser = numberUser.slice(0, 2) + numberUser.slice(3);
         }
 
-        let shouldSend = true;
+        //---------------------------------------Verifica se o número é valido----------------------------------------
+        const isTrue =  ws.isRegisteredUser(numberUser);
+
+        if (!isTrue) {
+            shouldSend = false;
+            dataTable.pus({
+                name: element.nome,
+                number: element.number,
+                enviou: 'Não'})
+        }
+        
         if (phoneNumbers.includes(numberUser) || numberUser[2] === '3') {
             shouldSend = false;
         }
+
+
+        //---------------------------------------Se passar por todas as verificações, faz o disparo-------------------
         if (shouldSend) {
             phoneNumbers.push(numberUser);
             numberUser = `55${numberUser}@c.us`
-            let nameElement = element.name.split('+')[0]
-            const message = data.message ? data.message.replace('{nome_cliente}', nameElement) : 'Olá, tudo bem?';
+            let nameElement = element.name.split(' ')[0];
+            nameElement = nameElement.charAt(0).toUpperCase() + nameElement.slice(1).toLowerCase();
+            const message = data.message.replace('{nome_cliente}', nameElement);
             messageContent = message;
             ws.sendMessage(numberUser, message).then(e => {
                 if (files != null && files != undefined) {
@@ -199,20 +183,11 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                 numbersArray.push(numberUser)
                 dataTable.push({
                     name: element.name,
-                    numero: element.number,
-                    email: element.email,
+                    number: element.number,
                     enviou: 'Sim'
                 })
-                createFile(dataTable)
             }).catch(error => {
-                dataTable.push({
-                    name: element.name,
-                    numero: element.number,
-                    email: element.email,
-                    enviou: 'Não'
-                })
                 console.log(element.name, element.number)
-                createFile(dataTable)
                 console.log(error)
             });
         } else {
@@ -221,11 +196,12 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
 
 
         // }
-        setTimeout(next, numberAleatorio(60000, 120000));
+        setTimeout(next, numberAleatorio(900000, 180000));
     }).then(() => {
+        createFile(dataTable)
         isSending = false;
     });
-    res.send({ msg: 'done', data: array, numbersArray, messageContent, type: 'whatsApp' })
+    res.send({ msg: 'done', dataTable })
 })
 
 function gerarStringAleatoria(tamanho) {
@@ -264,16 +240,6 @@ app.post('/cancelwhats', (req, res) => {
 })
 
 
-
-function createFile(data) {
-    const csvDataResult = data.map(object => `${object.name},${object.numero},${object.email},${object.enviou} \n`).join('');
-    // Escrevendo a string no arquivo
-    fs.writeFile('Enviados.csv', csvDataResult, (err) => {
-        if (err) throw err;
-        console.log('The file has been saved!');
-    });
-
-}
 
 
 

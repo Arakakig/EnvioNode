@@ -106,7 +106,7 @@ const attConstruct = () => {
         SendPlanilhaInput
     ])
     const inputMessageContent = inputTextarea(uniKey(), {
-        classNameB: 'input-field fscroll',
+        classNameB: 'input-field fscroll textAreaGrande',
     });
     const inputDivContent = Section(uniKey(), { classNameB: "" });
 
