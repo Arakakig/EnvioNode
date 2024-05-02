@@ -38,8 +38,6 @@ $(() => {
     ]);
 
 
-
-
     const SendNewEmail = Button(uniKey(), {
         classNameB: "button-7 button-add",
         content: [Icon('envelope'), ' Enviar Email'],
@@ -136,11 +134,17 @@ const attConstruct = () => {
         space(),
     ]);
 
-
+    const cancelWhats = Button(uniKey(), {
+        classNameB: "button-7",
+        content: [Icon('ban'), ' Cancelar o envio'],
+        click: (() => {
+            CancelWhats();
+        })
+    })
 
     const SendWhatsAppTo = Button(uniKey(), {
-        classNameB: "button-7",
-        content: [Icon('Check'), ' Concluir'],
+        classNameB: "button-7 ",
+        content: [Icon('check'), ' Enviar Mensagem'],
         click: (() => {
             SendWhatsApp(inputMessageContent.value, 'Todos os Setores', arrayContent, ArquivoWhatsApp, completName);
             $.fancybox.close()
@@ -163,6 +167,7 @@ const attConstruct = () => {
     $(buttonsFinal).css('text-align', 'center')
 
     $(buttonsFinal).html([
+        cancelWhats,
         SendWhatsAppTo
     ])
 
@@ -795,7 +800,7 @@ async function TransformCsvtoArray(file) {
     });
 }
 function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo = '', nameComplet=true) {
-    console.log(arquivo)
+    notifyMsg('success', 'Mensagens enviadas com sucesso!"', { positionClass: "toast-bottom-right" });
     let listDocUsersSend = users;
     let listUsersAux = [];
     if (setor != 'Todos os Setores') {

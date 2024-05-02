@@ -128,6 +128,7 @@ HEAD
   background-image: url('/v2/app/assets/img/long-logo-white.png');
 }
 
+
 .nav-header {
   display: grid;
   grid-template-columns: auto auto;

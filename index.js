@@ -113,7 +113,6 @@ function createFile(data) {
 
 }
 
-
 app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
     continueRoading = true;
     if (isSending) {
@@ -127,82 +126,85 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
     let numbersArray = []
     let numberSend = JSON.parse(data.listDocUsersSend);
     let dataTable = [];
-    async.timesSeries(numberSend.length, (i, next) => {
-        if (!continueRoading) return true;
-        
-        const element = numberSend[i];
-        console.log(element)
-        let shouldSend = true;
-        let numberUser;
+    try {
+        for (let i = 0; i < numberSend.length; i++) {
+            if (!continueRoading) break;
+            
+            const element = numberSend[i];
+            console.log(element);
+            let shouldSend = true;
+            let numberUser;
 
-        //---------------------------------------Verifica se o número é válido---------------------------------------
+            //---------------------------------------Verifica se o número é válido---------------------------------------
 
-        if (element === element.number || element.number == '' || element.number == undefined || element.number == null) {
-            return res.status(400).json({ message: 'O número em questão não existe' });
-        }
+            if (element === element.number || element.number == '' || element.number == undefined || element.number == null) {
+                return res.status(400).json({ message: 'O número em questão não existe' });
+            }
 
-        //---------------------------------------Remove caracteres especiais e atualiza o ddd------------------------
-        numberUser = element.number.replace(/\s/g, '').replace(/[^a-zA-Z0-9]/g, '').replace('@c.us', '');
-        if (numberUser.length < 10) {
-            numberUser = "67" + numberUser;
-
-        }
-        //---------------------------------------Se tiver o 9 inicial, retira----------------------------------------
-        if (numberUser.length === 11 && numberUser[2] === '9') {
-            numberUser = numberUser.slice(0, 2) + numberUser.slice(3);
-        }
-
-        //---------------------------------------Verifica se o número é valido----------------------------------------
-        const isTrue =  ws.isRegisteredUser(numberUser);
-
-        if (!isTrue) {
-            shouldSend = false;
-            dataTable.pus({
-                name: element.nome,
-                number: element.number,
-                enviou: 'Não'})
-        }
-        
-        if (phoneNumbers.includes(numberUser) || numberUser[2] === '3') {
-            shouldSend = false;
-        }
-
-
-        //---------------------------------------Se passar por todas as verificações, faz o disparo-------------------
-        if (shouldSend) {
-            phoneNumbers.push(numberUser);
-            numberUser = `55${numberUser}@c.us`
-            let nameElement = element.name.split(' ')[0];
-            nameElement = nameElement.charAt(0).toUpperCase() + nameElement.slice(1).toLowerCase();
-            const message = data.message.replace('{nome_cliente}', nameElement);
-            messageContent = message;
-            ws.sendMessage(numberUser, message).then(e => {
-                if (files != null && files != undefined) {
-                    sendMessageMedia(numberUser, files, 'imagem')
-                }
-                numbersArray.push(numberUser)
+            //---------------------------------------Remove caracteres especiais e atualiza o ddd------------------------
+            numberUser = element.number.replace(/\s/g, '').replace(/[^a-zA-Z0-9]/g, '').replace('@c.us', '');
+            if (numberUser.length < 10) {
+                numberUser = "67" + numberUser;
+            }
+            //---------------------------------------Se tiver o 9 inicial, retira----------------------------------------
+            if (numberUser.length === 11 && numberUser[2] === '9') {
+                numberUser = numberUser.slice(0, 2) + numberUser.slice(3);
+            }
+            const numeroAux = `55${numberUser}@c.us`;
+            console.log(numeroAux);
+            //---------------------------------------Verifica se o número é valido----------------------------------------
+            const isTrue = await ws.isRegisteredUser(numeroAux); // Espera a Promise ser resolvida
+            console.log(isTrue);
+            if (!isTrue) {
                 dataTable.push({
                     name: element.name,
                     number: element.number,
-                    enviou: 'Sim'
+                    enviou: 'Não'
                 })
-            }).catch(error => {
-                console.log(element.name, element.number)
-                console.log(error)
-            });
-        } else {
-            return next();
+                shouldSend = false;
+            }
+            
+            if (phoneNumbers.includes(numberUser) || numberUser[2] === '3') {
+                shouldSend = false;
+            }
+
+
+            //---------------------------------------Se passar por todas as verificações, faz o disparo-------------------
+            if (shouldSend) {
+                console.log('Enviando mensagem para: ', numberUser)
+                phoneNumbers.push(numberUser);
+                numberUser = `55${numberUser}@c.us`
+                let nameElement = element.name;
+                const message = data.message.replace('{nome_cliente}', nameElement);
+                messageContent = message;
+                ws.sendMessage(numberUser, message).then(e => {
+                    if (files != null && files != undefined) {
+                        sendMessageMedia(numberUser, files, 'imagem')
+                    }
+                    numbersArray.push(numberUser)
+                    dataTable.push({
+                        name: element.name,
+                        number: element.number,
+                        enviou: 'Sim'
+                    })
+                }).catch(error => {
+                    console.log(error)
+                });
+            } else {
+                console.log('Número inválido: ', numberUser);
+                continue;
+            }
+            await new Promise(resolve => setTimeout(resolve, numberAleatorio(30000, 60000)));
         }
-
-
-        // }
-        setTimeout(next, numberAleatorio(900000, 180000));
-    }).then(() => {
         createFile(dataTable)
+    } catch (error) {
+        console.error(error);
+    } finally {
         isSending = false;
-    });
-    res.send({ msg: 'done', dataTable })
-})
+        res.send({ msg: 'done', dataTable });
+    }
+});
+
 
 function gerarStringAleatoria(tamanho) {
     const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ,.;?/!@#$%¨&*()_+-=<>{}[]';

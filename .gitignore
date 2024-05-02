@@ -78,4 +78,4 @@ typings/
 .fusebox/
 .wwebjs_auth/session-client-one/AutofillStates/2020.11.2.164946/BD
 
-.session
+session/
