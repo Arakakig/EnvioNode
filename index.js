@@ -7,6 +7,7 @@ const qrcode = require('qrcode-terminal');
 const { Client, MessageMedia, LocalAuth, LegacySessionAuth, Buttons, List } = require('whatsapp-web.js');
 const cors = require('cors');
 const async = require('async');
+const puppeteer = require('puppeteer');
 require('buffer');
 
 const port = process.env.PORT || 4006;
@@ -30,17 +31,34 @@ const SESSION_FILE_PATH = './session.json';
 let ws;
 let sessionData;
 
-
+const openUrl = async () => {
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+    await page.goto('http://localhost:4006');
+}
 
 //-----------------------------------------------------------Com autenticação-----------------------------------------------------------
 const withSession = async () => {
+    console.log("Com Sessão")
     sessionData = require(SESSION_FILE_PATH);
-    ws = new Client({ authStrategy: new LocalAuth({ dataPath: "sessions", }), webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html', } });
-    ws.on('ready', () => console.log('Cliente está pronto!'));
+    const browser = await puppeteer.launch({ headless: false });
+    ws = new Client({
+        puppeteer: {
+            headless: false,
+        },
+        authStrategy: new LocalAuth({
+            clientId: this.id,
+            dataPath: this.sessionPath,
+        }),
+    })
+    ws.on('ready', async () => {
+        console.log('Cliente está pronto!');
+        await openUrl();
+    });
     ws.on('auth_failure', () => {
         console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **');
         fs.unlinkSync('./session.json');
-    })
+    });
     ws.initialize();
 }
 
@@ -48,39 +66,39 @@ const withSession = async () => {
 //-----------------------------------------------------------Sem autenticação-----------------------------------------------------------
 
 const withOutSession = async () => {
+    console.log("Sem Sessão")
+    const browser = await puppeteer.launch({ headless: false });
     ws = new Client({
-        puppeteer: {
-            executablePath: '/usr/bin/brave-browser-stable',
-            args: ["--no-sandbox", "--disable-dev-shm-usage"],
-        },
-        authStrategy: new LocalAuth({ dataPath: "sessions", }), webVersionCache: { type: 'remote', remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html', },
         puppeteer: {
             headless: false,
         },
-    });
-
-    // Geramos o QRCODE no Terminal
+        authStrategy: new LocalAuth({
+            clientId: this.id,
+            dataPath: this.sessionPath,
+        }),
+    })
     ws.on('qr', qr => {
         qrcode.generate(qr, { small: true });
     });
-    ws.on('ready', () => console.log('Cliente está pronto!'));
+    ws.on('ready', async () => {
+        console.log('Cliente está pronto!');
+        await openUrl();
+    });
     ws.on('auth_failure', () => {
         console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **');
         fs.unlinkSync('./session.json');
-    })
+    });
     ws.on('authenticated', (session) => {
         sessionData = session;
-        console.log(sessionData)
+        console.log(sessionData);
         if (sessionData != undefined) {
             fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), (err) => {
                 if (err) console.log(err);
             });
         }
-
     });
     ws.initialize();
 }
-
 
 
 (fs.existsSync(SESSION_FILE_PATH)) ? withSession() : withOutSession();
