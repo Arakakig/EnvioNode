@@ -212,7 +212,7 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                 console.log('Número inválido: ', numberUser);
                 continue;
             }
-            await new Promise(resolve => setTimeout(resolve, numberAleatorio(30000, 60000)));
+            await new Promise(resolve => setTimeout(resolve, numberAleatorio(15000, 30000)));
         }
         createFile(dataTable)
     } catch (error) {
