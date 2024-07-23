@@ -66,7 +66,6 @@ const withSession = async () => {
 //-----------------------------------------------------------Sem autenticação-----------------------------------------------------------
 
 const withOutSession = async () => {
-    console.log("Sem Sessão")
     const browser = await puppeteer.launch({ headless: false });
     ws = new Client({
         puppeteer: {
@@ -90,18 +89,17 @@ const withOutSession = async () => {
     });
     ws.on('authenticated', (session) => {
         sessionData = session;
-        console.log(sessionData);
-        if (sessionData != undefined) {
-            fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), (err) => {
-                if (err) console.log(err);
-            });
-        }
+        // if (sessionData != undefined) {
+        //     fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), (err) => {
+        //         if (err) console.log(err);
+        //     });
+        // }
     });
     ws.initialize();
 }
 
 
-(fs.existsSync(SESSION_FILE_PATH)) ? withSession() : withOutSession();
+(fs.existsSync(SESSION_FILE_PATH)) ? withOutSession() : withOutSession();
 
 
 
@@ -160,7 +158,10 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
             }
 
             //---------------------------------------Remove caracteres especiais e atualiza o ddd------------------------
-            numberUser = element.number.replace(/\s/g, '').replace(/[^a-zA-Z0-9]/g, '').replace('@c.us', '');
+            numberUser = element.number.replace(/\D/g, '');
+            if (numberUser.length < 8) {
+                shouldSend = false;
+            }
             if (numberUser.length < 10) {
                 numberUser = "67" + numberUser;
             }
@@ -171,16 +172,18 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
             const numeroAux = `55${numberUser}@c.us`;
             console.log(numeroAux);
             //---------------------------------------Verifica se o número é valido----------------------------------------
-            const isTrue = await ws.isRegisteredUser(numeroAux); // Espera a Promise ser resolvida
-            console.log(isTrue);
-            if (!isTrue) {
-                dataTable.push({
-                    name: element.name,
-                    number: element.number,
-                    enviou: 'Não'
-                })
-                shouldSend = false;
+            if(shouldSend){
+                const isTrue = await ws.isRegisteredUser(numeroAux); // Espera a Promise ser resolvida
+                if (!isTrue) {
+                    dataTable.push({
+                        name: element.name,
+                        number: element.number,
+                        enviou: 'Não'
+                    })
+                    shouldSend = false;
+                }
             }
+          
             
             if (phoneNumbers.includes(numberUser) || numberUser[2] === '3') {
                 shouldSend = false;
@@ -264,6 +267,3 @@ app.post('/cancelwhats', (req, res) => {
 
 
 app.listen(port, () => console.log(`Running on port ${port}`))
-
-
-
