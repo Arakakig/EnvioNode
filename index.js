@@ -108,10 +108,17 @@ const sendMessageMedia = (number, file, caption = '') => {
     file.forEach(element => {
         const data = fs.readFileSync(element.path);
         const media = new MessageMedia(element.mimetype, data.toString('base64'), element.originalname, element.size);
-        ws.sendMessage(number, media);
-    });
 
-}
+        // Verifica se o arquivo é um vídeo
+        if (element.mimetype.startsWith('video')) {
+            console.log('Enviando vídeo para: ', number);
+        }
+
+        // Envia o arquivo (imagem, vídeo, etc.)
+        ws.sendMessage(number, media, { caption });
+    });
+};
+
 
 //--------------------------------------------------------Verifica se está em execução--------------------------------------------------------
 let isSending = false;
@@ -120,6 +127,7 @@ let continueRoading = true;
 function numberAleatorio(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
 
 function createFile(data) {
     const csvDataResult = data.map(object => `${object.name},${object.number},${object.enviou} \n`).join('');
@@ -145,9 +153,8 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
     try {
         for (let i = 0; i < numberSend.length; i++) {
             if (!continueRoading) break;
-            
+            let numberAleatorioAux = numberAleatorio(1, 10000);
             const element = numberSend[i];
-            console.log(element);
             let shouldSend = true;
             let numberUser;
 
@@ -172,7 +179,7 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
             const numeroAux = `55${numberUser}@c.us`;
             console.log(numeroAux);
             //---------------------------------------Verifica se o número é valido----------------------------------------
-            if(shouldSend){
+            if (shouldSend) {
                 const isTrue = await ws.isRegisteredUser(numeroAux); // Espera a Promise ser resolvida
                 if (!isTrue) {
                     dataTable.push({
@@ -183,8 +190,8 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                     shouldSend = false;
                 }
             }
-          
-            
+
+
             if (phoneNumbers.includes(numberUser) || numberUser[2] === '3') {
                 shouldSend = false;
             }
@@ -197,8 +204,10 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                 numberUser = `55${numberUser}@c.us`
                 let nameElement = element.name;
                 const message = data.message.replace('{nome_cliente}', nameElement);
-                messageContent = message;
-                ws.sendMessage(numberUser, message).then(e => {
+                const protocolo = `\n \n \n_Id: `+numberAleatorioAux + '_';
+                const mensagemComProtocolo = message + protocolo;
+                messageContent = mensagemComProtocolo;
+                ws.sendMessage(numberUser, messageContent).then(e => {
                     if (files != null && files != undefined) {
                         sendMessageMedia(numberUser, files, 'imagem')
                     }
@@ -239,7 +248,7 @@ function gerarStringAleatoria(tamanho) {
 app.post('/treinaNumber', async (req, res) => {
     const numberUser = `556781145831@c.us`;
     const intervaloDeEnvio = numberAleatorio(30000, 180000); // Intervalo de envio em milissegundos
-    
+
     async function enviarMensagens() {
         const comprimentoAleatorio = numberAleatorio(30, 60);
         const stringAleatoria = gerarStringAleatoria(comprimentoAleatorio); // Gerando uma string aleatória de comprimento 10
@@ -252,7 +261,7 @@ app.post('/treinaNumber', async (req, res) => {
             setTimeout(enviarMensagens, intervaloDeEnvio);
         }
     }
-    
+
     enviarMensagens(); // Inicia o envio de mensagens
 });
 
