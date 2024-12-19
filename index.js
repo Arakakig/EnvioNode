@@ -149,7 +149,10 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
     const phoneNumbers = [];
     let numbersArray = []
     let numberSend = JSON.parse(data.listDocUsersSend);
+    let invalidNumbers = []; 
     let dataTable = [];
+    let messagesSent = 0; // Contador de mensagens enviadas
+
     try {
         for (let i = 0; i < numberSend.length; i++) {
             if (!continueRoading) break;
@@ -182,11 +185,7 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
             if (shouldSend) {
                 const isTrue = await ws.isRegisteredUser(numeroAux); // Espera a Promise ser resolvida
                 if (!isTrue) {
-                    dataTable.push({
-                        name: element.name,
-                        number: element.number,
-                        enviou: 'Não'
-                    })
+                    invalidNumbers.push({ name: element?.name, number: element.number });
                     shouldSend = false;
                 }
             }
@@ -217,6 +216,7 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                         number: element.number,
                         enviou: 'Sim'
                     })
+                    messagesSent++;
                 }).catch(error => {
                     console.log(error)
                 });
@@ -224,14 +224,18 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                 console.log('Número inválido: ', numberUser);
                 continue;
             }
-            await new Promise(resolve => setTimeout(resolve, numberAleatorio(15000, 30000)));
+            await new Promise(resolve => setTimeout(resolve, numberAleatorio(7000, 20000)));
+            if (messagesSent % 50 === 0) {
+                console.log('Pausa prolongada para evitar bloqueio...');
+                await new Promise(resolve => setTimeout(resolve, numberAleatorio(300000, 600000))); // 5-10 minutos
+            }
         }
         createFile(dataTable)
     } catch (error) {
         console.error(error);
     } finally {
         isSending = false;
-        res.send({ msg: 'done', dataTable });
+        res.send({ msg: 'done', invalidNumbers });
     }
 });
 

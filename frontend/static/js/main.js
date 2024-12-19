@@ -94,7 +94,7 @@ const attConstruct = () => {
 
 
     let completName = true;
-    let teste1Aux = ['Nome Completo', 'Primeiro Nome'];   
+    let teste1Aux = ['Nome Completo', 'Primeiro Nome'];
     const divPlanilha = Section(uniKey(), { classNameB: "divPlanilha" });
 
     const SendPlanilhaInput = $("<input type='file' class='inputPlanilha button-7 ' accept='.csv' onchange='setFileContent(event.target.files[0])'/>");
@@ -115,13 +115,13 @@ const attConstruct = () => {
         classNameB: "input-field",
         options: teste1Aux,
         onchange: (e) => {
-            if(completName==false){
+            if (completName == false) {
                 completName = true;
             }
-            else{
+            else {
                 completName = true;
             }
-      
+
         },
     });
 
@@ -317,7 +317,7 @@ Equipe da Pax Nippon`;
             })
         })
     })
-    
+
     $(aniversarioSection).html([
         nText({ text: "Botão de Aniversário", classNameB: "title-modal center" }),
         space(),
@@ -671,7 +671,7 @@ const modalAddPlanilha = async () => {
     $("#modal-create-unique-content").html("")
     $.fancybox.open({ src: "#modal-create-unique", touch: false, keyboard: false });
     let completName = true;
-    let teste1Aux = ['Nome Completo', 'Primeiro Nome'];   
+    let teste1Aux = ['Nome Completo', 'Primeiro Nome'];
     const divPlanilha = Section(uniKey(), { classNameB: "divPlanilha" });
 
     const SendPlanilhaInput = $("<input type='file' class='inputPlanilha button-7 ' accept='.csv' onchange='setFileContent(event.target.files[0])'/>");
@@ -692,13 +692,13 @@ const modalAddPlanilha = async () => {
         classNameB: "input-field",
         options: teste1Aux,
         onchange: (e) => {
-            if(completName==false){
+            if (completName == false) {
                 completName = true;
             }
-            else{
+            else {
                 completName = true;
             }
-      
+
         },
     });
 
@@ -799,7 +799,7 @@ async function TransformCsvtoArray(file) {
         };
     });
 }
-function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo = '', nameComplet=true) {
+function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo = '', nameComplet = true) {
     notifyMsg('success', 'Mensagens enviadas com sucesso!"', { positionClass: "toast-bottom-right" });
     let listDocUsersSend = users;
     let listUsersAux = [];
@@ -829,26 +829,58 @@ function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo =
         contentType: false
     })
         .done((res) => {
-            if (res.data.length > 0) {
-                res.data.forEach((doc) => {
-                    notifyMsg('error', '<strong>Erro:</strong><br>Ocorreu um erro ao tentar enviar as mensagens ' + doc, { positionClass: "toast-bottom-right" });
-                })
+            // Verifica se há erros retornados
+            if (res.invalidNumbers && res.invalidNumbers.length > 0) {
+                notifyMsg('error', 'Algumas mensagens não foram enviadas. Gerando lista...', { positionClass: "toast-bottom-right" });
+
+                // Função para gerar o CSV
+                generateCSV(res.invalidNumbers, 'numeros_invalidos');
             } else {
                 let content = {
                     timeStamp: new Date(),
                     message: res.messageContent,
                     fromTo: res.numbersArray,
                     type: res.type
-                }
-                firestore.collection('messages').add(content)
+                };
+                firestore.collection('messages').add(content);
 
                 notifyMsg('success', 'Mensagens enviadas com sucesso!"', { positionClass: "toast-bottom-right" });
             }
         })
         .catch((err) => {
-            //err
-        })
+            console.error('Erro na requisição:', err);
+            notifyMsg('error', 'Erro ao enviar mensagens.', { positionClass: "toast-bottom-right" });
+        });
 }
+
+function generateCSV(data, fileName) {
+    const csvRows = [];
+    const headers = ['Nome', 'Número']; // Cabeçalho do arquivo CSV
+    csvRows.push(headers.join(';')); // Adiciona o cabeçalho ao CSV com ';'
+
+    // Itera sobre os dados e formata as linhas
+    data.forEach(item => {
+        const row = [item.name, item.number]; // Pega os valores do JSON
+        csvRows.push(row.join(';')); // Adiciona a linha formatada ao CSV com ';'
+    });
+
+    // Converte o conteúdo do CSV em Blob
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+    // Cria um link temporário para download do arquivo
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${fileName}.csv`; // Nome do arquivo CSV
+
+    // Adiciona o link ao DOM e simula o clique
+    document.body.appendChild(link);
+    link.click();
+
+    // Remove o link do DOM após o download
+    document.body.removeChild(link);
+}
+
 
 function enviarMensagensWhatsAppTreino() {
     const mensagem = 'Treinamento de envio de mensagens';
@@ -861,15 +893,15 @@ function enviarMensagensWhatsAppTreino() {
             mensagem: mensagem
         })
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Erro ao enviar mensagens');
-        }
-        console.log('Mensagens enviadas com sucesso');
-    })
-    .catch(error => {
-        console.error('Erro ao enviar mensagens:', error);
-    });
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro ao enviar mensagens');
+            }
+            console.log('Mensagens enviadas com sucesso');
+        })
+        .catch(error => {
+            console.error('Erro ao enviar mensagens:', error);
+        });
 }
 
 function CancelWhats() {
