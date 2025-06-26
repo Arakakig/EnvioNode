@@ -40,66 +40,177 @@ const openUrl = async () => {
 //-----------------------------------------------------------Com autenticação-----------------------------------------------------------
 const withSession = async () => {
     console.log("Com Sessão")
-    sessionData = require(SESSION_FILE_PATH);
-    const browser = await puppeteer.launch({ headless: false });
-    ws = new Client({
-        puppeteer: {
+    try {
+        sessionData = require(SESSION_FILE_PATH);
+        const browser = await puppeteer.launch({ 
             headless: false,
-        },
-        authStrategy: new LocalAuth({
-            clientId: this.id,
-            dataPath: this.sessionPath,
-        }),
-    })
-    ws.on('ready', async () => {
-        console.log('Cliente está pronto!');
-        await openUrl();
-    });
-    ws.on('auth_failure', () => {
-        console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **');
-        fs.unlinkSync('./session.json');
-    });
-    ws.initialize();
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu'
+            ]
+        });
+        ws = new Client({
+            puppeteer: {
+                headless: false,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu'
+                ]
+            },
+            authStrategy: new LocalAuth({
+                clientId: 'client-one',
+                dataPath: './sessions',
+            }),
+        })
+        ws.on('ready', async () => {
+            console.log('Cliente está pronto!');
+            await openUrl();
+        });
+        ws.on('auth_failure', (msg) => {
+            console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **', msg);
+            try {
+                fs.unlinkSync('./session.json');
+            } catch (err) {
+                console.log('Erro ao deletar session.json:', err);
+            }
+        });
+        ws.on('disconnected', (reason) => {
+            console.log('Cliente desconectado:', reason);
+        });
+        await ws.initialize();
+    } catch (error) {
+        console.error('Erro na inicialização com sessão:', error);
+        // Fallback para sem sessão
+        await withOutSession();
+    }
 }
 
 
 //-----------------------------------------------------------Sem autenticação-----------------------------------------------------------
 
 const withOutSession = async () => {
-    const browser = await puppeteer.launch({ headless: false });
-    ws = new Client({
-        puppeteer: {
+    try {
+        const browser = await puppeteer.launch({ 
             headless: false,
-        },
-        authStrategy: new LocalAuth({
-            clientId: this.id,
-            dataPath: this.sessionPath,
-        }),
-    })
-    ws.on('qr', qr => {
-        qrcode.generate(qr, { small: true });
-    });
-    ws.on('ready', async () => {
-        console.log('Cliente está pronto!');
-        await openUrl();
-    });
-    ws.on('auth_failure', () => {
-        console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **');
-        fs.unlinkSync('./session.json');
-    });
-    ws.on('authenticated', (session) => {
-        sessionData = session;
-        // if (sessionData != undefined) {
-        //     fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), (err) => {
-        //         if (err) console.log(err);
-        //     });
-        // }
-    });
-    ws.initialize();
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu'
+            ]
+        });
+        ws = new Client({
+            puppeteer: {
+                headless: false,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu'
+                ]
+            },
+            authStrategy: new LocalAuth({
+                clientId: 'client-one',
+                dataPath: './sessions',
+            }),
+        })
+        ws.on('qr', qr => {
+            console.log('QR Code recebido');
+            qrcode.generate(qr, { small: true });
+        });
+        ws.on('ready', async () => {
+            console.log('Cliente está pronto!');
+            await openUrl();
+        });
+        ws.on('auth_failure', (msg) => {
+            console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **', msg);
+            try {
+                fs.unlinkSync('./session.json');
+            } catch (err) {
+                console.log('Erro ao deletar session.json:', err);
+            }
+        });
+        ws.on('disconnected', (reason) => {
+            console.log('Cliente desconectado:', reason);
+        });
+        ws.on('authenticated', (session) => {
+            console.log('Autenticado com sucesso');
+            sessionData = session;
+        });
+        await ws.initialize();
+    } catch (error) {
+        console.error('Erro na inicialização sem sessão:', error);
+        throw error;
+    }
 }
 
 
-(fs.existsSync(SESSION_FILE_PATH)) ? withOutSession() : withOutSession();
+// Initialize WhatsApp client
+const initializeWhatsApp = async () => {
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    const tryInitialize = async () => {
+        try {
+            if (fs.existsSync(SESSION_FILE_PATH)) {
+                console.log('Tentando inicializar com sessão existente...');
+                await withSession();
+            } else {
+                console.log('Inicializando sem sessão...');
+                await withOutSession();
+            }
+        } catch (error) {
+            console.error(`Erro na inicialização do WhatsApp (tentativa ${retryCount + 1}):`, error);
+            
+            // Check if it's the serialize error
+            if (error.message && error.message.includes('serialize')) {
+                console.log('Erro de serialize detectado. Tentando limpar sessão e reinicializar...');
+                try {
+                    if (fs.existsSync(SESSION_FILE_PATH)) {
+                        fs.unlinkSync(SESSION_FILE_PATH);
+                    }
+                    // Clear sessions directory
+                    if (fs.existsSync('./sessions')) {
+                        fs.rmSync('./sessions', { recursive: true, force: true });
+                        fs.mkdirSync('./sessions');
+                    }
+                } catch (cleanupError) {
+                    console.log('Erro ao limpar sessões:', cleanupError);
+                }
+            }
+            
+            if (retryCount < maxRetries) {
+                retryCount++;
+                console.log(`Tentativa ${retryCount} de ${maxRetries}...`);
+                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+                return tryInitialize();
+            } else {
+                console.error('Máximo de tentativas atingido. Verifique sua conexão com a internet e tente novamente.');
+                throw error;
+            }
+        }
+    };
+    
+    await tryInitialize();
+};
+
+initializeWhatsApp();
 
 
 
@@ -274,7 +385,6 @@ app.post('/cancelwhats', (req, res) => {
     continueRoading = false;
     res.send({ msg: 'Cancelado o envio' })
 })
-
 
 
 
