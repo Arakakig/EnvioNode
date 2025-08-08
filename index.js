@@ -79,7 +79,7 @@ app.put('/api/messages', async (req, res) => {
 //-----------------------------------------------------------Com autenticação-----------------------------------------------------------
 const getPuppeteerConfig = () => {
     const isHeroku = !!process.env.DYNO;
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN || undefined;
     return {
         headless: isHeroku ? true : false,
         args: [
