@@ -1,2 +1,3 @@
-2025/06/26-15:28:36.893 6190 Creating DB C:\Users\guilh\Downloads\EnvioNode-main (1)\EnvioNode-main\sessions\session-client-one\Default\Session Storage since it was missing.
-2025/06/26-15:28:36.900 6190 Reusing MANIFEST C:\Users\guilh\Downloads\EnvioNode-main (1)\EnvioNode-main\sessions\session-client-one\Default\Session Storage/MANIFEST-000001
+2025/08/08-17:23:50.850 7244 Reusing MANIFEST C:\Users\guilh\OneDrive\Documentos\GitHub\EnvioNode\sessions\session-client-one\Default\Session Storage/MANIFEST-000001
+2025/08/08-17:23:50.851 7244 Recovering log #3
+2025/08/08-17:23:50.852 7244 Reusing old log C:\Users\guilh\OneDrive\Documentos\GitHub\EnvioNode\sessions\session-client-one\Default\Session Storage/000003.log 

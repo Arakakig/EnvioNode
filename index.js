@@ -14,9 +14,12 @@ const port = process.env.PORT || 4006;
 
 app.use(express.static(__dirname + '/frontend/static'));
 app.use(express.json())
-app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, "frontend", "static")))
+app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, "frontend", "index.html")))
 const upload = multer({ dest: 'uploads/' });
-app.get("/*", (req, res) => {
+app.get("/*", (req, res, next) => {
+    if (req.path && req.path.startsWith('/api/')) {
+        return next();
+    }
     res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
 });
 
@@ -30,43 +33,75 @@ app.use(cors({ origin: true }));
 const SESSION_FILE_PATH = './session.json';
 let ws;
 let sessionData;
+let latestQr = null;
+let isWhatsAppReady = false;
+const MESSAGES_FILE = path.join(__dirname, 'frontend', 'static', 'messages.json');
 
-const openUrl = async () => {
-    const browser = await puppeteer.launch({ headless: false });
-    const page = await browser.newPage();
-    await page.goto('http://localhost:4006');
-}
+// API: mensagens padrão (editar JSON principal)
+app.get('/api/messages', async (req, res) => {
+    try {
+        if (!fs.existsSync(MESSAGES_FILE)) {
+            return res.json({ templates: [] });
+        }
+        const raw = await fs.promises.readFile(MESSAGES_FILE, 'utf-8');
+        const data = JSON.parse(raw || '{"templates":[]}');
+        res.json(data);
+    } catch (err) {
+        console.error('Erro ao ler messages.json:', err);
+        res.status(500).json({ error: 'Erro ao ler mensagens' });
+    }
+});
+
+app.put('/api/messages', async (req, res) => {
+    try {
+        const body = req.body;
+        if (!body || !Array.isArray(body.templates)) {
+            return res.status(400).json({ error: 'Payload inválido: esperado { templates: [] }' });
+        }
+        // validação simples dos campos
+        const sanitized = body.templates.map((t) => ({
+            id: String(t.id || ''),
+            label: String(t.label || ''),
+            text: String(t.text || ''),
+        })).filter(t => t.id && t.label);
+
+        const finalJson = { templates: sanitized };
+        await fs.promises.writeFile(MESSAGES_FILE, JSON.stringify(finalJson, null, 2), 'utf-8');
+        res.json({ ok: true, count: sanitized.length });
+    } catch (err) {
+        console.error('Erro ao gravar messages.json:', err);
+        res.status(500).json({ error: 'Erro ao salvar mensagens' });
+    }
+});
+
+// Removido: abertura automática de página no navegador
 
 //-----------------------------------------------------------Com autenticação-----------------------------------------------------------
+const getPuppeteerConfig = () => {
+    const isHeroku = !!process.env.DYNO;
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
+    return {
+        headless: isHeroku ? true : false,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu'
+        ],
+        ...(executablePath ? { executablePath } : {})
+    };
+};
+
 const withSession = async () => {
     console.log("Com Sessão")
     try {
         sessionData = require(SESSION_FILE_PATH);
-        const browser = await puppeteer.launch({ 
-            headless: false,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu'
-            ]
-        });
+        // Removido: lançamento extra do Puppeteer (cliente já gerencia o navegador)
         ws = new Client({
-            puppeteer: {
-                headless: false,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--disable-gpu'
-                ]
-            },
+            puppeteer: getPuppeteerConfig(),
             authStrategy: new LocalAuth({
                 clientId: 'client-one',
                 dataPath: './sessions',
@@ -74,7 +109,13 @@ const withSession = async () => {
         })
         ws.on('ready', async () => {
             console.log('Cliente está pronto!');
-            await openUrl();
+            isWhatsAppReady = true;
+            latestQr = null;
+        });
+        ws.on('qr', qr => {
+            console.log('QR Code recebido (sessão existente)');
+            latestQr = qr;
+            qrcode.generate(qr, { small: true });
         });
         ws.on('auth_failure', (msg) => {
             console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **', msg);
@@ -83,9 +124,11 @@ const withSession = async () => {
             } catch (err) {
                 console.log('Erro ao deletar session.json:', err);
             }
+            isWhatsAppReady = false;
         });
         ws.on('disconnected', (reason) => {
             console.log('Cliente desconectado:', reason);
+            isWhatsAppReady = false;
         });
         await ws.initialize();
     } catch (error) {
@@ -100,31 +143,9 @@ const withSession = async () => {
 
 const withOutSession = async () => {
     try {
-        const browser = await puppeteer.launch({ 
-            headless: false,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu'
-            ]
-        });
+        // Removido: lançamento extra do Puppeteer (cliente já gerencia o navegador)
         ws = new Client({
-            puppeteer: {
-                headless: false,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--no-zygote',
-                    '--disable-gpu'
-                ]
-            },
+            puppeteer: getPuppeteerConfig(),
             authStrategy: new LocalAuth({
                 clientId: 'client-one',
                 dataPath: './sessions',
@@ -132,11 +153,13 @@ const withOutSession = async () => {
         })
         ws.on('qr', qr => {
             console.log('QR Code recebido');
+            latestQr = qr;
             qrcode.generate(qr, { small: true });
         });
         ws.on('ready', async () => {
             console.log('Cliente está pronto!');
-            await openUrl();
+            isWhatsAppReady = true;
+            latestQr = null;
         });
         ws.on('auth_failure', (msg) => {
             console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **', msg);
@@ -145,13 +168,16 @@ const withOutSession = async () => {
             } catch (err) {
                 console.log('Erro ao deletar session.json:', err);
             }
+            isWhatsAppReady = false;
         });
         ws.on('disconnected', (reason) => {
             console.log('Cliente desconectado:', reason);
+            isWhatsAppReady = false;
         });
         ws.on('authenticated', (session) => {
             console.log('Autenticado com sucesso');
             sessionData = session;
+            isWhatsAppReady = true;
         });
         await ws.initialize();
     } catch (error) {
@@ -211,6 +237,39 @@ const initializeWhatsApp = async () => {
 };
 
 initializeWhatsApp();
+// QR endpoints para frontend
+app.get('/api/qr', async (req, res) => {
+    try {
+        if (isWhatsAppReady) {
+            return res.json({ status: 'ready' });
+        }
+        if (!latestQr) {
+            return res.json({ status: 'awaiting' });
+        }
+        // Gera PNG base64 do QR para render no frontend
+        const QRCode = require('qrcode');
+        const dataUrl = await QRCode.toDataURL(latestQr, { margin: 1, scale: 6 });
+        res.json({ status: 'qr', dataUrl });
+    } catch (err) {
+        console.error('Erro ao gerar QR:', err);
+        res.status(500).json({ error: 'Erro ao gerar QR' });
+    }
+});
+
+app.post('/api/qr/reset', async (req, res) => {
+    try {
+        // Força reinicialização para obrigar novo QR
+        isWhatsAppReady = false;
+        latestQr = null;
+        if (ws) {
+            try { await ws.destroy(); } catch (e) {}
+        }
+        await initializeWhatsApp();
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Falha ao resetar sessão' });
+    }
+});
 
 
 
@@ -274,8 +333,9 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
 
             //---------------------------------------Verifica se o número é válido---------------------------------------
 
-            if (element === element.number || element.number == '' || element.number == undefined || element.number == null) {
-                return res.status(400).json({ message: 'O número em questão não existe' });
+            if (!element || !element.number || element.number === '') {
+                invalidNumbers.push({ name: element?.name, number: element?.number || '' });
+                continue;
             }
 
             //---------------------------------------Remove caracteres especiais e atualiza o ddd------------------------
@@ -312,25 +372,36 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
                 console.log('Enviando mensagem para: ', numberUser)
                 phoneNumbers.push(numberUser);
                 numberUser = `55${numberUser}@c.us`
-                let nameElement = element.name;
+                // Define nome conforme opção recebida do frontend (nameComplet)
+                const useFullName = (data.nameComplet === true || data.nameComplet === 'true');
+                let nameElement = element.name || '';
+                if (!useFullName && typeof nameElement === 'string') {
+                    const parts = nameElement.trim().split(/\s+/);
+                    nameElement = parts.length > 0 ? parts[0] : nameElement;
+                }
                 const message = data.message.replace('{nome_cliente}', nameElement);
-                const protocolo = `\n \n \n_Id: `+numberAleatorioAux + '_';
+                const protocolo = `\n \n \n_Id: ` + numberAleatorioAux + '_';
                 const mensagemComProtocolo = message + protocolo;
                 messageContent = mensagemComProtocolo;
-                ws.sendMessage(numberUser, messageContent).then(e => {
-                    if (files != null && files != undefined) {
-                        sendMessageMedia(numberUser, files, 'imagem')
+
+                // Se houver arquivos, envia a(s) mídia(s) com a legenda (texto) junto; caso contrário, envia texto puro
+                if (files && Array.isArray(files) && files.length > 0) {
+                    sendMessageMedia(numberUser, files, messageContent);
+                } else {
+                    try {
+                        await ws.sendMessage(numberUser, messageContent);
+                    } catch (error) {
+                        console.log(error);
                     }
-                    numbersArray.push(numberUser)
-                    dataTable.push({
-                        name: element.name,
-                        number: element.number,
-                        enviou: 'Sim'
-                    })
-                    messagesSent++;
-                }).catch(error => {
-                    console.log(error)
-                });
+                }
+
+                numbersArray.push(numberUser)
+                dataTable.push({
+                    name: element.name,
+                    number: element.number,
+                    enviou: 'Sim'
+                })
+                messagesSent++;
             } else {
                 console.log('Número inválido: ', numberUser);
                 continue;
@@ -346,7 +417,9 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
         console.error(error);
     } finally {
         isSending = false;
-        res.send({ msg: 'done', invalidNumbers });
+        if (!res.headersSent) {
+            res.send({ msg: 'done', invalidNumbers });
+        }
     }
 });
 
