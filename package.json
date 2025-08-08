@@ -7,11 +7,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "build": "webpack ./index.js --output-filename=bundle.js"
+    "build": "echo Skipping webpack build",
+    "heroku-postbuild": "echo Skipping postbuild"
   },
   "keywords": [],
   "author": "Guilherme Arakaki",
   "license": "MIT",
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "async": "^3.2.4",
     "base64-arraybuffer": "^1.0.2",
@@ -34,8 +38,5 @@
     "util": "^0.12.5",
     "whatsapp-web.js": "^1.22.2-alpha.1"
   },
-  "devDependencies": {
-    "webpack": "^5.75.0",
-    "webpack-cli": "^4.9.2"
-  }
+  "devDependencies": {}
 }
