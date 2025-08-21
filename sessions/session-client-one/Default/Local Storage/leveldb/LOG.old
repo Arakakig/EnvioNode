@@ -1,3 +1,6 @@
-2025/08/08-17:22:57.547 1d68 Reusing MANIFEST C:\Users\guilh\OneDrive\Documentos\GitHub\EnvioNode\sessions\session-client-one\Default\Local Storage\leveldb/MANIFEST-000001
-2025/08/08-17:22:57.549 1d68 Recovering log #4
-2025/08/08-17:22:57.550 1d68 Reusing old log C:\Users\guilh\OneDrive\Documentos\GitHub\EnvioNode\sessions\session-client-one\Default\Local Storage\leveldb/000004.log 
+2025/08/14-14:44:43.334 310c Reusing MANIFEST C:\Users\guilh\OneDrive\Documentos\GitHub\EnvioNode\sessions\session-client-one\Default\Local Storage\leveldb/MANIFEST-000001
+2025/08/14-14:44:43.335 310c Recovering log #3
+2025/08/14-14:44:43.336 310c Reusing old log C:\Users\guilh\OneDrive\Documentos\GitHub\EnvioNode\sessions\session-client-one\Default\Local Storage\leveldb/000003.log 
+2025/08/14-14:45:44.024 78bc Level-0 table #5: started
+2025/08/14-14:45:44.027 78bc Level-0 table #5: 20734 bytes OK
+2025/08/14-14:45:44.028 78bc Delete type=0 #3

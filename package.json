@@ -8,7 +8,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
     "build": "echo Skipping webpack build",
-    "heroku-postbuild": "echo Skipping postbuild"
+    "heroku-postbuild": "echo Skipping postbuild",
+    "clean:dist": "rmdir /S /Q dist 2>nul & mkdir dist",
+    "build:exe": "npm run clean:dist && pkg index.js -t node18-win-x64 --compress Brotli -o dist\\enviomsg.exe --public && xcopy /E /I /Y frontend dist\\frontend && copy /Y run-enviomsg.bat dist\\run-enviomsg.bat"
   },
   "keywords": [],
   "author": "Guilherme Arakaki",
@@ -38,5 +40,7 @@
     "util": "^0.12.5",
     "whatsapp-web.js": "^1.22.2-alpha.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
 }

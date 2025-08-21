@@ -1,13 +1,13 @@
 "use strict";
 
 var firebaseConfig = {
-    apiKey: "AIzaSyCXGjzx00TjaqjbmLSqIk5U1RYVtVxAJ-8",
-    authDomain: "nipponatt.firebaseapp.com",
-    projectId: "nipponatt",
-    storageBucket: "nipponatt.appspot.com",
-    messagingSenderId: "167548057096",
-    appId: "1:167548057096:web:43b9fd3e741c2b565b03bd",
-    measurementId: "G-2HWGGX2KSB"
+    apiKey: "<REDACTED_API_KEY>",
+    authDomain: "<REDACTED_AUTH_DOMAIN>",
+    projectId: "<REDACTED_PROJECT_ID>",
+    storageBucket: "<REDACTED_STORAGE_BUCKET>",
+    messagingSenderId: "<REDACTED_SENDER_ID>",
+    appId: "<REDACTED_APP_ID>",
+    measurementId: "<REDACTED_MEASUREMENT_ID>"
 };
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
@@ -849,7 +849,6 @@ function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo =
         })
         .catch((err) => {
             console.error('Erro na requisição:', err);
-            notifyMsg('error', 'Erro ao enviar mensagens.', { positionClass: "toast-bottom-right" });
         });
 }
 
@@ -897,7 +896,6 @@ function enviarMensagensWhatsAppTreino() {
             if (!response.ok) {
                 throw new Error('Erro ao enviar mensagens');
             }
-            console.log('Mensagens enviadas com sucesso');
         })
         .catch(error => {
             console.error('Erro ao enviar mensagens:', error);

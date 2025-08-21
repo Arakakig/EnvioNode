@@ -1,0 +1,34 @@
+{
+  "templates": [
+    {
+      "id": "cobranca_2_6",
+      "label": "Cobrança 2-6",
+      "text": "Olá {nome_cliente} tudo bem?\n\nAqui é o Guilherme da Pax Nippon. Passando para informar que a sua mensalidade já venceu. \n\nVocê pode estar realizando o pagamento via Pix:\n\nNippon \nTipo: CNPJ\nPix: 41.220.924/0001-80\n\nQualquer dúvida eu estou à disposição 😊"
+    },
+    {
+      "id": "cobranca_7_12",
+      "label": "Cobrança 7-12",
+      "text": "Olá {nome_cliente}, tudo bem?\n\nAqui é o Guilherme da Pax Nippon. Estamos com algumas pendências, se você quiser, posso ver o que eu consigo para fazermos um acordo e regularizá-las.\n\nCaso você não seja a pessoa, ou já tenha feito um acordo, por favor desconsidere essa mensagem."
+    },
+    {
+      "id": "cobranca_12_60",
+      "label": "Cobrança 12-60",
+      "text": "Olá {nome_cliente}, tudo bem?\n\nAqui é o Guilherme da Pax Nippon. Estamos com algumas pendências, se você quiser, posso ver o que eu consigo para fazermos um acordo e regularizá-las.\n\nCaso você não seja a pessoa, ou já tenha feito um acordo, por favor desconsidere essa mensagem."
+    },
+    {
+      "id": "indevida",
+      "label": "Indevida",
+      "text": "Está certo mesmo. Eu peço perdão. Teve um erro aqui.\n\nDesculpa o incômodo, tenha um ótimo dia!"
+    },
+    {
+      "id": "pessoa_errada",
+      "label": "Pessoa Errada",
+      "text": "Tudo bem, vou retirar o seu número aqui do nosso sistema.\n\nTenha um ótimo dia! Peço perdão pelo inconveniente."
+    },
+    {
+      "id": "aniversario",
+      "label": "Aniversário",
+      "text": "Olá, {nome_cliente}!\n\nHoje é um dia especial, pois é o seu aniversário! 🎉🎂 Desejamos muita felicidade, saúde e sucesso.\n\nEstamos sempre à disposição. Um grande abraço!"
+    }
+  ]
+}

@@ -10,17 +10,36 @@ const async = require('async');
 const puppeteer = require('puppeteer');
 require('buffer');
 
+// When packaged with pkg, __dirname points to snapshot. Use appRoot to resolve real FS paths
+const isPackaged = !!process.pkg;
+const appRoot = isPackaged ? path.dirname(process.execPath) : __dirname;
+function ensureDirectoryExists(targetPath) {
+    try {
+        if (!fs.existsSync(targetPath)) {
+            fs.mkdirSync(targetPath, { recursive: true });
+        }
+    } catch (err) {
+        console.error('Falha ao garantir diretório:', targetPath, err);
+    }
+}
+
 const port = process.env.PORT || 4006;
 
-app.use(express.static(__dirname + '/frontend/static'));
+// Servir arquivos estáticos a partir do diretório real do app
+const staticDir = path.join(appRoot, 'frontend', 'static');
+app.use(express.static(staticDir));
 app.use(express.json())
-app.get('/', (req, res) => res.sendFile(path.resolve(__dirname, "frontend", "index.html")))
-const upload = multer({ dest: 'uploads/' });
+app.get('/', (req, res) => res.sendFile(path.resolve(appRoot, "frontend", "index.html")))
+
+// Uploads ficam em uma pasta real ao lado do executável
+const uploadsDir = path.join(appRoot, 'uploads');
+ensureDirectoryExists(uploadsDir);
+const upload = multer({ dest: uploadsDir });
 app.get("/*", (req, res, next) => {
     if (req.path && req.path.startsWith('/api/')) {
         return next();
     }
-    res.sendFile(path.resolve(__dirname, "frontend", "index.html"));
+    res.sendFile(path.resolve(appRoot, "frontend", "index.html"));
 });
 
 
@@ -30,12 +49,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true }));
 
 
-const SESSION_FILE_PATH = './session.json';
+const SESSION_FILE_PATH = path.join(appRoot, 'session.json');
 let ws;
 let sessionData;
 let latestQr = null;
 let isWhatsAppReady = false;
-const MESSAGES_FILE = path.join(__dirname, 'frontend', 'static', 'messages.json');
+const MESSAGES_FILE = path.join(appRoot, 'frontend', 'static', 'messages.json');
 
 // API: mensagens padrão (editar JSON principal)
 app.get('/api/messages', async (req, res) => {
@@ -77,9 +96,28 @@ app.put('/api/messages', async (req, res) => {
 // Removido: abertura automática de página no navegador
 
 //-----------------------------------------------------------Com autenticação-----------------------------------------------------------
+function guessChromiumPath() {
+    // Permite Chrome ou Edge no Windows
+    const candidatePaths = [
+        process.env.PUPPETEER_EXECUTABLE_PATH,
+        process.env.CHROME_BIN,
+        process.env.MSEDGE_BIN,
+        'C\\\:\\\Program Files\\\Google\\\Chrome\\\Application\\\chrome.exe'.replace(/\\\\/g, '\\\\'),
+        'C\\\:\\\Program Files (x86)\\\Google\\\Chrome\\\Application\\\chrome.exe'.replace(/\\\\/g, '\\\\'),
+        'C\\\:\\\Program Files\\\Microsoft\\\Edge\\\Application\\\msedge.exe'.replace(/\\\\/g, '\\\\'),
+        'C\\\:\\\Program Files (x86)\\\Microsoft\\\Edge\\\Application\\\msedge.exe'.replace(/\\\\/g, '\\\\')
+    ].filter(Boolean);
+    for (const p of candidatePaths) {
+        try {
+            if (p && fs.existsSync(p)) return p;
+        } catch (_) { /* ignore */ }
+    }
+    return undefined;
+}
+
 const getPuppeteerConfig = () => {
     const isHeroku = !!process.env.DYNO;
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN || undefined;
+    const executablePath = guessChromiumPath();
     return {
         headless: isHeroku ? true : false,
         args: [
@@ -104,7 +142,7 @@ const withSession = async () => {
             puppeteer: getPuppeteerConfig(),
             authStrategy: new LocalAuth({
                 clientId: 'client-one',
-                dataPath: './sessions',
+                dataPath: path.join(appRoot, 'sessions'),
             }),
         })
         ws.on('ready', async () => {
@@ -120,7 +158,9 @@ const withSession = async () => {
         ws.on('auth_failure', (msg) => {
             console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **', msg);
             try {
-                fs.unlinkSync('./session.json');
+                if (fs.existsSync(SESSION_FILE_PATH)) {
+                    fs.unlinkSync(SESSION_FILE_PATH);
+                }
             } catch (err) {
                 console.log('Erro ao deletar session.json:', err);
             }
@@ -148,7 +188,7 @@ const withOutSession = async () => {
             puppeteer: getPuppeteerConfig(),
             authStrategy: new LocalAuth({
                 clientId: 'client-one',
-                dataPath: './sessions',
+                dataPath: path.join(appRoot, 'sessions'),
             }),
         })
         ws.on('qr', qr => {
@@ -164,7 +204,9 @@ const withOutSession = async () => {
         ws.on('auth_failure', (msg) => {
             console.log('** O erro de autenticação regenera o QRCODE (Excluir o arquivo session.json) **', msg);
             try {
-                fs.unlinkSync('./session.json');
+                if (fs.existsSync(SESSION_FILE_PATH)) {
+                    fs.unlinkSync(SESSION_FILE_PATH);
+                }
             } catch (err) {
                 console.log('Erro ao deletar session.json:', err);
             }
@@ -212,9 +254,10 @@ const initializeWhatsApp = async () => {
                         fs.unlinkSync(SESSION_FILE_PATH);
                     }
                     // Clear sessions directory
-                    if (fs.existsSync('./sessions')) {
-                        fs.rmSync('./sessions', { recursive: true, force: true });
-                        fs.mkdirSync('./sessions');
+                    const sessionsDir = path.join(appRoot, 'sessions');
+                    if (fs.existsSync(sessionsDir)) {
+                        fs.rmSync(sessionsDir, { recursive: true, force: true });
+                        fs.mkdirSync(sessionsDir);
                     }
                 } catch (cleanupError) {
                     console.log('Erro ao limpar sessões:', cleanupError);
@@ -236,6 +279,9 @@ const initializeWhatsApp = async () => {
     await tryInitialize();
 };
 
+// Garante diretórios necessários quando inicia
+ensureDirectoryExists(path.join(appRoot, 'sessions'));
+ensureDirectoryExists(uploadsDir);
 initializeWhatsApp();
 // QR endpoints para frontend
 app.get('/api/qr', async (req, res) => {
@@ -301,7 +347,8 @@ function numberAleatorio(min, max) {
 
 function createFile(data) {
     const csvDataResult = data.map(object => `${object.name},${object.number},${object.enviou} \n`).join('');
-    fs.writeFile('Enviados.csv', csvDataResult, (err) => {
+    const outCsv = path.join(uploadsDir, 'Enviados.csv');
+    fs.writeFile(outCsv, csvDataResult, (err) => {
         if (err) throw err;
     });
 
@@ -346,8 +393,8 @@ app.post('/sendmessagewhatsapp', upload.array('files[]'), async (req, res) => {
             if (numberUser.length < 10) {
                 numberUser = "67" + numberUser;
             }
-            //---------------------------------------Se tiver o 9 inicial, retira----------------------------------------
-            if (numberUser.length === 11 && numberUser[2] === '9') {
+            //---------------------------------------Se tiver o 9 após o DDD, retira-------------------------------------
+            if (numberUser.length >= 10 && numberUser[2] === '9') {
                 numberUser = numberUser.slice(0, 2) + numberUser.slice(3);
             }
             const numeroAux = `55${numberUser}@c.us`;

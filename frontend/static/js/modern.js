@@ -275,7 +275,6 @@ function SendWhatsApp(message, setor = 'Todos os Setores', users = [], arquivo =
     })
     .catch((err) => {
       console.error('Erro na requisição:', err);
-      notifyMsg('error', 'Erro ao enviar mensagens.', { positionClass: 'toast-bottom-right' });
     });
 }
 
